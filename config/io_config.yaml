@@ -1,0 +1,87 @@
+# === General Settings ===
+general:
+  start_date: "2020-01-01"
+  end_date: "2020-01-05"
+  override: true
+  oscar_mode: "nrt"  # options: final, interim, nrt
+  datadir: "/Users/stewarta/Desktop/oscarpy/datasets"
+  ssh_mode: 'neurost' #options: cmems, neurost, all
+  sst_mode: 'cmc'
+  wind_mode: 'era5'
+  do_eq: true
+
+diagnostics:
+  nrt:
+    interp_grad_fig: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/interp_grad/figures/"
+    interp_grad_data: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/interp_grad/data/"
+    computation_fig: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/computation/figures/"
+    computation_data: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/computation/data/"
+  currents:
+    region: "earth" #options: gulfstream, indian ocean, caribbean, earth, austrailia_nz 
+    fig_root: "/Users/stewarta/Desktop/oscarpy/diagnostics/currents/figures"
+
+# === SSH ===
+ssh:
+  cmems:
+    input: 
+      data_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/CMEMSNRT/"
+      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/CMEMSNRT/SRC/"
+      var: "ssh"
+      file_prefix: "nrt_"
+      file_pattern: "nrt_global_allsat_phy_l4_*.nc"
+      data_source: "CMEMS"
+    
+
+  neurost:
+    input:
+      data_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/NEUROST/SRC/"
+      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/NEUROST/SRC/"
+      var: "ssh"
+      file_prefix: "nrt_"
+      file_pattern: "NeurOST_SSH-SST_*.nc"
+      data_source: "NEURO_ST"
+    
+
+# === SST Input ===
+sst:
+  cmc:
+    input: 
+      data_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SST/CMC/SRC/"
+      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SST/CMC/SRC/"
+      var: "sst"
+      file_prefix: "sst_"
+      file_pattern: "*CMC-L4_GHRSST-SSTfnd-*.nc"
+      data_source: "CMC"
+      
+# === Wind ===
+wind:
+  era5:
+    input:
+      data_dir: "/Users/stewarta/Desktop/oscarpy/datasets/WIND/ERA5/SRC/"
+      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/WIND/ERA5/SRC/"
+      var_u: "u10"
+      var_v: "v10"
+      file_prefix: "era5_"
+      file_pattern: "ERA5SRC*.nc"
+      data_source: "ERA5"
+    output:
+      figures_dir: "/Users/stewarta/Desktop/NASA_OSCAR/oscarpydebug/preprocessing/figures"
+
+# === PO.DAAC Metadata ===
+podaac:
+  description:
+    ssh: "CMEMS SSALTO/DUACS SEALEVEL_GLO_PHY_L4_NRT_OBSERVATIONS_008_046 DOI: 10.48670/moi-00149"
+    wind: "ECMWF ERA5 10m wind DOI: 10.24381/cds.adbb2d47"
+    sst: "CMC 0.1 deg SST V3.0 DOI: 10.5067/GHCMC-4FM03"
+    oscar: "Ocean Surface Current Analyses Real-time (OSCAR) Surface Currents - Interim 0.25 Degree (Version 2.0)"
+  summary: "Higher quality than NRT currents, but lesser quality than final currents."
+  id: "OSCAR_L4_OC_INTERIM_V2.0"
+  doi: "10.5067/OSCAR-25I20"
+  fields:
+    - "Ugi"
+    - "Uwi"
+    - "Ubi"
+    - "OSCARi"
+  output_dir_cmems: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/CMEMS"
+  output_dir_neurost: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST"
+  output_file_prefix: "oscar_currents_"
