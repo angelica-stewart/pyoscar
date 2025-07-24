@@ -1,11 +1,13 @@
 I will develop the read me more later this week but for now, here are the steps to run oscar. 
 
 1. Organize your datasets and diagnostics folders. The diagnostics folder has the checks along the way to see the interpolated graphs and all the gradients, I will work on creating a flag to turn this off. These folders should be on the same level as pyoscar. For example
+
     |_datasets
     |_diagnostics
     |_pyoscar
 
-    a. How to organize the datasets folder
+        a. How to organize the datasets folder
+
         |_datasets
             |_CURRENTS
                 |_FINAL (EMPTY RN)
