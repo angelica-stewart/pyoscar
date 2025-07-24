@@ -75,7 +75,7 @@ I will develop the read me more later this week but for now, here are the steps 
 
 More about how pyoscar is organized right now
 
-pyoscar
+    pyoscar
     |_analysis (this is where I plan to do all the analyses including plotting the currents, validation agains the drifter etc ... I have the drifter code for the most part but gotta integrate it)
     |_computation
         |_ compute_currents.py (this is like the "main" for the computation, a short function encapsulating everything)
