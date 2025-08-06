@@ -5,10 +5,46 @@ import os
 import datetime as dt
 import re
 import yaml
-from ..config import setup
+from ..config.setup import *
 from datetime import datetime, timedelta
 
+def get_date_range(date_list):
+    """
+    Given a list of two date strings [start_date, end_date], return a list of all dates
+    (inclusive) between them in 'YYYY-MM-DD' format. Raise error if end < start.
+    """
+    if len(date_list) != 2:
+        raise ValueError("Input must be a list of exactly two date strings.")
 
+    start_date = datetime.strptime(date_list[0], "%Y-%m-%d")
+    end_date = datetime.strptime(date_list[1], "%Y-%m-%d")
+
+    if end_date < start_date:
+        raise ValueError("End date cannot be earlier than start date.")
+
+    delta = (end_date - start_date).days
+    return [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(delta + 1)]
+
+def get_file_path(date, ssh_mode_val = None):
+    dt = datetime.strptime(date, "%Y-%m-%d")
+    date_str = dt.strftime("%Y%m%d")
+    year = dt.strftime("%Y")
+    month = dt.strftime("%m")
+    filename = f"oscar_currents_nrt{date_str}.nc"
+    if ssh_mode_val is None:
+
+        return os.path.join(search_path_plots, year, month, filename)
+    else:
+        if ssh_mode_val == "cmems":
+            return os.path.join(search_path_cmems, year, month, filename)
+        else:
+            return os.path.join(search_path_neurost, year, month, filename)
+        
+def get_title(date):
+    if region.lower() == "global":
+        return f"(GLOBAL) ({ssh_mode_plots.upper()}) OSCAR Surface Currents ({date})"
+    else:
+        return f"({ssh_mode_plots.upper()}) OSCAR Surface Currents of {region} on {date}"
 
 def load_ds(date_str, var):
 
@@ -20,16 +56,26 @@ def load_ds(date_str, var):
 
     # Determine source path and file pattern
     if var == "ssh":
+        if oscar_mode == "final":
+            if ssh_mode == "cmems":
+                ssh_src = ssh_src_cmems_final
+            else:
+                ssh_src = ssh_src_neurost_final
+        else:
+            if ssh_mode == "cmems":
+                ssh_src = ssh_src_cmems_interim
+            else:
+                ssh_src = ssh_src_neurost_interim
 
-        search_dir = os.path.join(setup.ssh_src, year, month)
-        pattern = setup.ssh_pattern.replace("*", f"{day_str}_*")
+        search_dir = os.path.join(ssh_src, year, month)
+        pattern = ssh_pattern.replace("*", f"{day_str}_*")
     elif var == "sst":
-        search_dir = os.path.join(setup.sst_src, year, month)
+        search_dir = os.path.join(sst_src, year, month)
         pattern = f"{day_str}*CMC-L4_GHRSST-SSTfnd*.nc"
 
     elif var == "wind":
-        search_dir = os.path.join(setup.wind_src, year)
-        pattern = setup.wind_pattern.replace("*", f"{year}{month}*")
+        search_dir = os.path.join(wind_src, year,month)
+        pattern = wind_pattern.replace("*", f"{day_str}")
 
     else:
         raise ValueError(f"Unsupported variable: {var}")
@@ -58,9 +104,10 @@ def load_ds(date_str, var):
         ds['sst'].values = ocean_temp
 
     elif var == "wind":
-        start_dt = np.datetime64(date_obj)
-        end_dt = np.datetime64(next_day_obj)  - np.timedelta64(1, 'ns')
-        ds = ds.sel(time=slice(start_dt, end_dt))
+        # start_dt = np.datetime64(date_obj)
+        # end_dt = np.datetime64(next_day_obj)  - np.timedelta64(1, 'ns')
+        # ds = ds.sel(time=slice(start_dt, end_dt))
+        ds = ds.rename({'valid_time': 'time'})
         ds = xr.merge([ds['u10'], ds['v10']])
 
     # === Normalize longitudes ===
@@ -82,7 +129,6 @@ def load_ds(date_str, var):
 
     return ds
 
-        
 def write_netcdf_file(ds, path, filename):
     filename = filename + '.nc'
     print(filename)
@@ -105,16 +151,7 @@ def write_oscar_to_podaac(refDs,Ug,Uw,Ub,PODAACFILE,PODAACDIR,SSHLONGDESC,WINDLO
 
         # Year/Month directory structure
         YRMONTHDIR = os.path.join(PODAACDIR, year, month)
-        # YRDIR=PODAACDIR+'/'+year 
-
-        # if not os.path.exists(YRDIR):
-        #     print("Creating new directory: " + YRDIR)
-        #     os.makedirs(YRDIR)
-    
-        # FILENM=YRDIR+'/'+PODAACFILE+date+'.nc'
-        # if os.path.exists(FILENM):
-        #     print("Removing existing file: " + FILENM)
-        #     os.remove(FILENM)
+  
 
         if not os.path.exists(YRMONTHDIR):
             print("Creating new directory: " + YRMONTHDIR)
@@ -333,14 +370,12 @@ def get_existing_dates(output_root, file_pattern="oscar_currents_nrt_*.nc"):
         except Exception as e:
             print(f"Warning: could not parse date from {base_name}: {e}")
     return dates
-
 def extract_date(path):
     filename = os.path.basename(path)
     date_str = ''.join(filter(str.isdigit, filename))
     year = date_str[0:4]
     month = date_str[4:6]
     return year, month
-
 def get_existing_dates(output_dir, start_date, end_date):
     existing = set()
     start = np.datetime64(start_date)
@@ -366,12 +401,7 @@ def get_existing_dates(output_dir, start_date, end_date):
 
 
     return existing
-
 def get_dates_to_process(start_date, end_date, output_dir, override=False):
-    """
-    Returns a list of np.datetime64 dates to process from start_date to end_date (inclusive).
-    Skips already processed dates unless override=True.
-    """
     all_dates = np.arange(np.datetime64(start_date), np.datetime64(end_date) + np.timedelta64(1, 'D'))
     existing_dates = get_existing_dates(output_dir, start_date, end_date)
 
@@ -380,31 +410,6 @@ def get_dates_to_process(start_date, end_date, output_dir, override=False):
 
     else:
         return [str(d) for d in all_dates if d not in existing_dates]
-
-
-def get_date_range(start_date: str, end_date: str):
-    """
-    Returns a list of date strings between start_date and end_date inclusive.
-    
-    Args:
-        start_date (str): Start date in 'YYYY-MM-DD' format.
-        end_date (str): End date in 'YYYY-MM-DD' format.
-        
-    Returns:
-        List[str]: List of dates as strings in 'YYYY-MM-DD' format.
-    """
-    dates = np.arange(np.datetime64(start_date), np.datetime64(end_date) + np.timedelta64(1, 'D'))
-    return [str(d) for d in dates]
-
-
-
-import os
-from datetime import datetime
-
-import os
-from datetime import datetime
-
-
 def date_exists(date_str: str, ssh_mode) -> bool:
     """
     Check if a current file exists for the given date based on SSH mode.
@@ -444,8 +449,95 @@ def date_exists(date_str: str, ssh_mode) -> bool:
     )
 
     return os.path.isfile(file_path)
+def parse_dates(dates):
+    """
+    Converts a list of 1 or 2 date strings or datetime objects into a full date list.
+    """
+    # Convert to datetime if input is string
+    dates = [datetime.strptime(d, "%Y-%m-%d") if isinstance(d, str) else d for d in dates]
+
+    if len(dates) == 1:
+        return [dates[0]]
+    elif len(dates) == 2:
+        start, end = dates
+        if start > end:
+            raise ValueError("Start date must be before end date.")
+        return [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    else:
+        raise ValueError("`dates` must contain 1 or 2 elements.")
 
 
-# ds = load_ds("2020-01-01", var="wind")
-# print(ds)
 
+def ready_for_oscar_mode(dates, oscar_mode, ssh_mode):
+    if check_wind(dates) and check_sst(dates) and check_ssh(dates, oscar_mode, ssh_mode):
+        return True
+    return False
+
+
+def check_ssh(dates,oscar_mode, ssh_mode):
+    if oscar_mode == "final":
+        if ssh_mode == "cmems":
+            ssh_root = ssh_src_cmems_final
+        else:
+            ssh_root = ssh_src_neurost_final
+    else:
+        if ssh_mode == "cmems":
+            ssh_root = ssh_src_cmems_interim
+        else:
+            ssh_root = ssh_src_neurost_interim
+
+    for d in dates:
+        y = d[:4]
+        m = d[5:7]
+        d_str = d.replace("-", "")
+
+        folder = os.path.join(ssh_root, y, m)
+        if ssh_mode == "cmems":
+            filename = f"ssh_{d_str}.nc"
+            file_path = os.path.join(folder, filename)
+            exists = os.path.exists(file_path)
+
+        elif ssh_mode == "neurost":
+            pattern = os.path.join(folder, f"NeurOST_SSH-SST_{d_str}_*.nc")
+            matches = glob.glob(pattern)
+            exists = len(matches) > 0
+
+        if not exists:
+ 
+            return False
+        
+
+    return True
+
+def check_sst(dates):
+    for d in dates:
+        y = d[:4]
+        m = d[5:7]
+        d_str = d.replace("-", "")
+
+        folder = os.path.join(sst_src, y, m)
+        filename_pattern = f"{d_str}*.nc"
+        file_path = os.path.join(folder, filename_pattern)
+        matches = glob.glob(file_path)
+        exists = len(matches) > 0
+        if not exists:
+            return False
+        
+
+    return True
+
+def check_wind(dates):
+    for d in dates:
+        y = d[:4]
+        m = d[5:7]
+        d_str = d.replace("-", "")
+
+        folder = os.path.join(wind_src, y, m)
+        filename = f"era5_{d_str}.nc"
+      
+        file_path = os.path.join(folder, filename)
+        exists = os.path.exists(file_path)
+        if not exists:
+            return False
+        
+    return True

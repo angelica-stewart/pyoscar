@@ -1,12 +1,10 @@
 import os
 import matplotlib.pyplot as plt
-import xarray as xr
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
 import numpy as np 
-import scipy as sp
 from ..utils.data_utils import extract_date, write_netcdf_file
 from ..config.setup import region, fig_root
+
+
 
 def animate_currents(ds, region, start_date, end_date):
     return
@@ -55,11 +53,12 @@ def extract_data(ds):
     lat = ds['lat']
     
     lon_adj = lon.where(lon <= 180, lon - 360)  
-    if region == 'earth':
+    #lon_adj = ((lon + 180) % 360) - 180
+    if region == 'global':
         lon_adj = lon_adj.sortby(lon_adj)
     
     region_bounds = {
-        'earth':      {'lon_min': -180, 'lon_max': 180,  'lat_min': -90,  'lat_max': 90},
+        'global':      {'lon_min': -180, 'lon_max': 180,  'lat_min': -90,  'lat_max': 90},
         'gulfstream': {'lon_min': -85,  'lon_max': -60,  'lat_min': 25,   'lat_max': 45},
         'caribbean':  {'lon_min': -90,  'lon_max': -55,  'lat_min': 9,    'lat_max': 23},
         'indian':     {'lon_min': 20,   'lon_max': 120,  'lat_min': -50,  'lat_max': 30},
@@ -86,9 +85,10 @@ def extract_data(ds):
 
   
     return u_sub, v_sub, lon_sub, lat_sub, speed_sub, lon2d, lat2d
-def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode, vmin=0, vmax=1.6):
+
+def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode_plots, vmin=0, vmax=1.6):
     year, month = extract_date(ds_path)
-    save_dir = os.path.join(fig_root, year, month, region,ssh_mode)
+    save_dir = os.path.join(fig_root, year, month, region,ssh_mode_plots)
     os.makedirs(save_dir, exist_ok=True)
 
     # File path
@@ -99,7 +99,7 @@ def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode, vmin=0, v
     
     plt.figure(figsize=(12, 8))
 
-    if region == 'earth':
+    if region == 'global':
         skip = 30
     else:
         skip =3
