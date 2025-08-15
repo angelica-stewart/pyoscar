@@ -5,9 +5,11 @@ with open("/Users/stewarta/Desktop/oscarpy/pyoscar/config/io_config.yaml", "r") 
     config = yaml.safe_load(f)
 
 do_currents = config['general']['do_currents']
-do_plots = config['general']['do_plots']
+do_plots = config['general']['do_plots'] #change to do_check_plots
 do_validation = config['general']['do_validation']
+do_validation_plots = config['general']['do_validation_plots']
 do_download = config['general']['do_download']
+do_pdf = config['general']['do_pdf']
 
 start_date = config["general"]["start_date"]
 end_date = config["general"]["end_date"]
@@ -92,3 +94,18 @@ else:
 
 search_path_cmems = config['podaac']['output_dir_cmems']
 search_path_neurost = config['podaac']['output_dir_neurost']
+
+
+drifter_src_dir = config['drifters']['src_dir']
+download_drifter = config['drifters']['download_drifter']
+drifter_download_date = config['drifters']['download_date']
+dates_to_validate = config['drifters']['dates_to_validate_range']
+validation_mode = config['general']['validation_mode']
+validation_dir = config['validation']['validation_dir']
+
+currents_cmems_final = config['podaac']['currents_cmems_final']
+currents_neurost_final = config['podaac']['currents_neurost_final']
+currents_cmems_interim = config['podaac']['currents_cmems_interim']
+currents_neurost_interim = config['podaac']['currents_neurost_interim']
+
+explanations = config['explanations']

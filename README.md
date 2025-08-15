@@ -1,4 +1,4 @@
-The paths for the validation are hardcoded right now because I am still working on it but that will change that at some point. 
+The paths for the validation are hardcoded right now because I am still working on it but that will change when I am finished.
 
 I will develop the read me more later this week but for now, here are the steps to run oscar. 
 

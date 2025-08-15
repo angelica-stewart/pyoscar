@@ -1,20 +1,23 @@
 # === General Settings ===
 general:
-  do_currents: false
+  do_currents: true
   do_plots: false
-  do_validation: true
+  do_validation: false
+  do_validation_plots: false
   do_download: false
+  do_pdf: false
 
-  start_date: "2020-01-01"
-  end_date: "2020-01-03"
+  start_date: "1993-01-01"
+  end_date: "1993-02-28"
   override: true
-  oscar_mode: "interim"
+  oscar_mode: "final"
   download_mode: "final"  # options: final, interim
   datadir: "/Users/stewarta/Desktop/oscarpy/datasets"
   ssh_mode: 'neurost' #options: cmems, neurost, all
   sst_mode: 'cmc'
   wind_mode: 'era5'
   do_eq: true
+  validation_mode: 'final'
 
 plots:
   ssh_mode: "neurost" #cmems or neurost
@@ -56,11 +59,11 @@ ssh:
       src_dir_cmems_final: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/FINAL/CMEMS/SRC/"
       var: "ssh"
       file_prefix: "nrt_"
-      file_pattern: "nrt_global_allsat_phy_l4_*.nc"
+      file_pattern: "ssh_*.nc"
       data_source: "CMEMS"
     download:
-      download_dates_cmems: ["2010-02-01", "2010-02-03"]
-      download_cmems: true
+      download_dates_cmems: ["1993-01-01", "1993-02-28"]
+      download_cmems: false
       skip_existing: false
 
 
@@ -75,8 +78,8 @@ ssh:
       data_source: "NEURO_ST"
     
     download:
-      download_dates_neurost: ["2010-02-01", "2010-02-03"]
-      download_neurost: true
+      download_dates_neurost: ["1993-01-01", "1993-02-28"]
+      download_neurost: false
       skip_existing: false
     
 
@@ -90,8 +93,8 @@ sst:
       file_pattern: "*CMC-L4_GHRSST-SSTfnd-*.nc"
       data_source: "CMC"
     download:
-      download_dates_sst: ["2010-02-01", "2010-02-03"]
-      download_sst: true
+      download_dates_sst: ["1993-01-01", "1993-02-28"]
+      download_sst: false
       skip_existing: false
       
 # === Wind ===
@@ -107,8 +110,8 @@ wind:
     output:
       figures_dir: "/Users/stewarta/Desktop/NASA_OSCAR/oscarpydebug/preprocessing/figures"
     download:
-      download_dates_wind: ["2010-02-01", "2010-02-03"]
-      download_wind: true
+      download_dates_wind: ["1993-01-01", "1993-02-28"]
+      download_wind: false
       skip_existing: false
 
 # === PO.DAAC Metadata ===
@@ -126,6 +129,44 @@ podaac:
     - "Uwi"
     - "Ubi"
     - "OSCARi"
-  output_dir_cmems: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/CMEMS"
-  output_dir_neurost: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST"
+  output_dir_cmems: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS"
+  output_dir_neurost: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST"
+  currents_cmems_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS'
+  currents_neurost_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST'
+  currents_cmems_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/CMEMS'
+  currents_neurost_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST'
   output_file_prefix: "oscar_currents_"
+
+drifters:
+  src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/DRIFTERS"
+  dates_to_validate_range: ['2020-01-01', '2020-01-31']
+  download_date: ["1993-01", "1993-02"]
+  download_drifter: true
+validation:   
+  validation_dir: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/VALIDATION/'
+  
+
+
+explanations:
+  - "Scatter of drifter vs CMEMS/NEUROST zonal velocity; points cluster near 1:1 with mild spread at high speeds."
+  - "barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot"
+  - "correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1"
+  - "correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2"
+  - "correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3"
+  - "correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4"
+  - "linear"
+  - "linear again"
+  - "linear again"
+  - "linearrrr"
+  - "slope map"
+  - "slope mapp"
+  - "slope mappp"
+  - "slope mapppp"
+  - "rms map"
+  - "rmss mappp"
+  - "rmsss mappp"
+  - "rms map"
+  - "residual corr"
+  - "ress cor"
+  - "residual corre"
+  - "ress corrr"

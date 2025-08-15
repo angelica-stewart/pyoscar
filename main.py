@@ -7,6 +7,11 @@ from .analysis.plot_currents import *
 from .analysis.drifter_func import *
 import pandas as pd
 from .utils.download import *
+import warnings
+from collections import defaultdict
+from .analysis.prepare_pdf import *
+
+warnings.filterwarnings("ignore")
 
 def run_compute_currents(dates_to_process):
     for date in dates_to_process:
@@ -58,54 +63,176 @@ def run_validation(dates):
         date_list = get_date_range(dates)
     else:
         raise ValueError("date list must contain 1 or 2 dates (start and end).")
-    
+
+    by_month = defaultdict(list)
     for date in date_list:
+        year, month, day= date.split("-")
+        by_month[(year, month)].append(date)
+  
 
-        #will create a "get_drifter_path_function"
-        drifter_path = "/Users/stewarta/Desktop/oscarpy/datasets/DRIFTERS/drifter_6hour_qc_e065_93e9_5ff9_U1752698601011.nc"
-        ds_drifter = xr.open_dataset(drifter_path)
-        
-        plot_drifter_map(ds_drifter)
-        valid_points = np.isfinite(ds_drifter['ve'].values)
-        print(np.sum(valid_points))
-        #plot_drifter_currents(ds_drifter)
-        
-        cmems_path = "/Users/stewarta/Desktop/NASA_OSCAR/datasets/CURRENTS/INTERIM/PODAAC/2020/oscar_currents_interim_20200101.nc"
+    
+    for (year, month), dates in by_month.items():
+        month_root = os.path.join(drifter_src_dir, year, month)
+        unique_drifter_month_dir = os.path.join(month_root, "drifter_by_id")
+        daily_avg_dir = os.path.join(month_root, "daily_avg")
+        os.makedirs(unique_drifter_month_dir, exist_ok=True)
+        os.makedirs(daily_avg_dir, exist_ok=True)
 
-        #cmems_path = get_file_path(date, 'cmems')
-        #neurost_path = get_file_path(date, 'neurost')
-
-        neurost_path = "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST/2020/01/oscar_currents_interim20200101.nc"
-
-        ds_oscar_cmems = xr.open_dataset(cmems_path)
-        ds_oscar_neurost = xr.open_dataset(neurost_path)
-        print("ve attr range:", ds_drifter['ve'].min().item())
-        print("vn attr range:", ds_drifter['vn'].max().item())
-
-
-        ds_drifter_cmems = bin_drifter_data(ds_drifter, 0.25)
-        plot_binned_locations(ds_drifter_cmems)
-        valid_points = np.isfinite(ds_drifter_cmems['ve'].values)
-        print(np.sum(valid_points))
-        ds_drifter_neurost = bin_drifter_data(ds_drifter, 0.1)
-        plot_binned_locations(ds_drifter_neurost)
-        valid_points = np.isfinite(ds_drifter_neurost['ve'].values)
-        print(np.sum(valid_points))
-        # # plot_drifter_component(ds_drifter_cmems, component="ve", region = 'gulf_stream')
-        # # plot_drifter_component(ds_drifter_neurost, component="ve", region = 'gulf_stream')
-
-
-
-        neurost_metrics = compare_velocity_components(ds_oscar_neurost, ds_drifter_neurost)
-        cmems_metrics = compare_velocity_components(ds_oscar_cmems, ds_drifter_cmems)
-        print(neurost_metrics)
-        print(cmems_metrics)
-        plot_velocity_comparison(ds_drifter_neurost['ve'].values, ds_oscar_neurost['u'].values)
-        plot_log_histogram(ds_drifter_neurost['ve'].values, ds_oscar_neurost['u'].values, component='u')
-
+        # 1) opens the raw drifter file for that month so for the year 2020 the first file that will be opened is drifter_6hour_qc_2020_01.nc
+        monthly_nc = get_drifter_monthly_file(drifter_src_dir, year, month)
         
 
-        return
+        # 2) check if the drifter_by_id folder for that month is empty, if it has files in it, 
+        #    we are assuminng the monthly average is already computed an no need to recompute (we can out a flag here to override).
+        #    if it is empty then e do 2a)
+        if not os.listdir(unique_drifter_month_dir):
+            sentinel = os.path.join(unique_drifter_month_dir, ".monthly_done")
+            if not os.path.exists(sentinel):
+                with xr.open_dataset(monthly_nc) as ds_month:
+
+                    #2a) we create the drifter_by_id folder, the get_uniq_drifter_daily_avg_folder returns a list of dataset, 
+                    # each representing one drifter and ech drifter has the daily average for that day. 
+                    get_unique_drifter_daily_avg(ds_month, unique_drifter_month_dir)
+                open(sentinel, "w").close()
+
+        #now that we have the daily averages for the month for each drifter, we want daily files of all the drifter so we can match it to OSCAR. 
+
+        # 3) For each day in that month, extract the daily data from  each drifter in the drifter_by_id folder
+        month_of_validation_data = []
+        for d in dates:
+            day_str = d[8:10]
+            
+            if not os.listdir(daily_avg_dir):
+                # 3a) this function creates the daily_avg folder which has for each day, all the drifters, their lat, lon, ve, vn etc. 
+                get_daily_avg_all_drifters(unique_drifter_month_dir, daily_avg_dir, d)
+            
+            #Now we have the daily averages to compare against OSCAR, however, the coordinates arent aligned, so we need to interpolate OSCAR to drifter coordinates. 
+        
+
+            if validation_mode =='final':
+                cmems_dir = os.path.join(currents_cmems_final, year, month)
+                neurost_dir = os.path.join(currents_neurost_final, year, month)
+            elif validation_mode == "interim":
+                cmems_dir = os.path.join(currents_cmems_interim, year, month)
+                neurost_dir = os.path.join(currents_neurost_interim, year, month)
+            else:
+                raise ValueError ("please specific if you want to validate interim or final")
+            
+            ds_cmems = xr.open_dataset(f'{cmems_dir}/oscar_currents_{validation_mode}{year}{month}{day_str}.nc')
+            ds_neurost = xr.open_dataset(f'{neurost_dir}/oscar_currents_{validation_mode}{year}{month}{day_str}.nc')
+            ds_drifter = xr.open_dataset(f'{drifter_src_dir}/{year}/{month}/daily_avg/drifters_{year}_{month}_{day_str}.nc')
+
+
+            ds_cmems = ds_cmems.rename({'longitude': 'lon', 'latitude': 'lat'})
+            ds_cmems = ds_cmems.set_coords(['lat', 'lon'])
+            u_cmems = ds_cmems['u'].transpose('time', 'lat', 'lon')
+            u_cmems = u_cmems.assign_coords(lat=ds_cmems['lat'], lon=ds_cmems['lon'])
+
+
+            
+            ds_neurost = ds_neurost.rename({'longitude': 'lon', 'latitude': 'lat'})
+            ds_neurost = ds_neurost.set_coords(['lat', 'lon'])
+            u_neurost = ds_neurost['u'].transpose('time', 'lat', 'lon')
+            u_neurost = u_neurost.assign_coords(lat=ds_neurost['lat'], lon=ds_neurost['lon'])
+
+            # Interpolate CMEMS
+            ds_drifter = interpolate_oscar_to_drifters(ds_cmems, ds_drifter, u_var='ve', v_var='vn', prefix='cmems')
+
+     
+
+            # # Interpolate NEUROST
+            ds_drifter = interpolate_oscar_to_drifters(ds_neurost, ds_drifter, u_var='ve', v_var='vn', prefix='neurost')
+
+           
+            # we are adding each interpolated day to a list, so we should have a monthe of
+            #drifter_d, drifter u, drifer v, cmems u, cmems v, neurost u, neurost v, lat lon, time
+          
+
+            month_of_validation_data.append(ds_drifter)
+    
+
+
+        print(month_of_validation_data[0])
+        print(month_of_validation_data[0].dims)
+        validation_path = os.path.join(validation_dir, year, f'validation_{year}_{month}.nc')
+        if not os.path.exists(os.path.join(validation_dir, year, f'validation_{year}_{month}.nc')):
+            if month_of_validation_data:
+                #validation_ds = xr.open_dataset(validation_path)
+                ds_monthly_validation = xr.concat(month_of_validation_data, dim='drifter')
+                print(ds_monthly_validation)
+                #validation_ds.close()
+                ds_monthly_validation.to_netcdf(validation_path)
+        #after the above block of code runs we now have one .nc file with a month of validation data
+        #validation data is the interpplated, neurost and cmems 
+        #now we need to appedn that to the master folder 
+  
+        #ACCOUNT FOR DUPLICATION
+        
+        append_to_master(year, month)
+
+        month_of_validation_data.clear()
+
+        master_path = os.path.join(validation_dir, 'validation_master.nc')
+        ds = xr.open_dataset(master_path)
+
+
+
+        df = ds[['latitude', 'longitude', 've', 'vn', 'cmems_ve', 'cmems_vn', 'neurost_ve', 'neurost_vn']].to_dataframe().dropna()
+        df = df[
+        (df['ve'] >= -2) & (df['ve'] <= 2) &
+        (df['vn'] >= -2) & (df['vn'] <= 2)
+        ]
+        print(df)
+        
+
+        corr_maps = compute_binned_correlations(
+            df,
+            models=('cmems','neurost'),
+            components=('ve','vn'),
+            lat_range=(-60, 60),
+            lon_range=(0, 360),
+            bin_size=2,
+            min_samples=5
+        )
+
+
+        figs = []
+        figs.append(plot_velocity_comparison_scatter(df))
+        figs.append(plot_validation_metrics(df, models=['cmems', 'neurost'], components=['ve', 'vn']))
+        figs.append(plot_binned_correlation_map(corr_maps[('cmems','ve')], 'cmems', 've', zoom_extent=None, title_prefix="Jan 2020"))
+        figs.append(plot_binned_correlation_map(corr_maps[('neurost','ve')], 'neurost', 've', zoom_extent=None, title_prefix="Jan 2020"))
+        figs.append(plot_binned_correlation_map(corr_maps[('cmems','vn')], 'cmems', 'vn', zoom_extent=None, title_prefix="Jan 2020"))
+        figs.append(plot_binned_correlation_map(corr_maps[('neurost','vn')], 'neurost', 'vn', zoom_extent=None, title_prefix="Jan 2020"))
+        figs.append(plot_density(df, 'cmems', 've', 'CMEMS', save_path=None))
+        figs.append(plot_density(df, "cmems", "vn", "CMEMS", save_path = None))
+        figs.append(plot_density(df, "neurost", "ve", "NEUROST", save_path = None))
+        figs.append(plot_density(df, "neurost", "vn", "NEUROST", save_path = None))
+        figs.append(make_slope_map(df, 've', 'cmems_ve', 'CMEMS Zonal Slope' ))
+        figs.append(make_slope_map(df, 'vn', 'cmems_vn', 'CMEMS Meridional Slope'))
+        figs.append(make_slope_map(df, 've', 'neurost_ve', 'NEUROST Zonal Slope'))
+        figs.append(make_slope_map(df, 'vn', 'neurost_vn', 'NEUROST Meridional Slope'))
+        figs.append(make_rms_map(df, 'cmems',   've', 'CMEMS Zonal RMSD'))
+        figs.append(make_rms_map(df, 'cmems',   'vn', 'CMEMS Meridional RMSD'))
+        figs.append(make_rms_map(df, 'neurost', 've', 'NEUROST Zonal RMSD'))
+        figs.append(make_rms_map(df, 'neurost', 'vn', 'NEUROST Meridional RMSD'))
+        figs.append(make_residual_corr_map(df, 'cmems',   've', 'CMEMS Zonal Residual–Truth Corr'))
+        figs.append(make_residual_corr_map(df, 'cmems',   'vn', 'CMEMS Meridional Residual–Truth Corr'))
+        figs.append(make_residual_corr_map(df, 'neurost', 've', 'NEUROST Zonal Residual–Truth Corr'))
+        figs.append(make_residual_corr_map(df, 'neurost', 'vn', 'NEUROST Meridional Residual–Truth Corr'))
+
+
+        
+        save_plots_to_pdf(
+            figs,
+            explanations,
+            pdf_path="validation_report.pdf",
+            metadata={"Title":"Validation Report","Author":"OSCAR"})
+                
+        
+        
+        
+
+    return
 
 def run_download():
     
@@ -124,6 +251,9 @@ def run_download():
     if download_sst:
         dates = parse_dates(download_dates_sst)
         download_sst_cmc(dates)
+
+    if download_drifter:
+        download_drifter_data(drifter_download_date)
 
     return
 

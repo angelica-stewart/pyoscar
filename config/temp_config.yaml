@@ -1,0 +1,121 @@
+general:
+  do_download:
+  do_currents:
+  do_currents_checks:
+  do_validation:
+  update_pdf:
+
+download:
+  download_mode: "final"  #options: final, interim 
+  ssh:
+    cmems:
+      do_download: true 
+      override_download: false
+    neurost:
+      do_download: true
+      override_download: false
+  sst:
+    cmc:
+      do_download: true
+      override_download: false
+  wind:
+    era5:
+      do_download: true
+      override_download: false
+  drifter:
+    do_download: true
+    override_download: false 
+
+
+currents:
+  start_date:
+  end_date:
+  override:
+  oscar-mode:
+  ssh_mode:
+  sst_mode:
+  wind_mode:
+  do_eq:
+  ssh:
+    cmems:
+      src_dir_cmems_interim: 
+      src_dir_cmems_final:
+      var:
+      file_prefix:
+      file_pattern:
+      data_source:
+    neurost:
+      src_dir_neurost_interim: 
+      src_dir_neurost_final:
+      var:
+      file_prefix:
+      file_pattern:
+      data_source:
+  sst:
+    cmc:
+      src_dir:
+      var:
+      file_prefix:
+      file_pattern:
+      data_source:
+  wind:
+    era5:
+      src_dir_cmems_interim: 
+      src_dir_cmems_final:
+      var_u:
+      var_v:
+      file_prefix:
+      file_pattern:
+      data_source:
+
+
+podaac:
+  description:
+    ssh: "CMEMS SSALTO/DUACS SEALEVEL_GLO_PHY_L4_NRT_OBSERVATIONS_008_046 DOI: 10.48670/moi-00149"
+    wind: "ECMWF ERA5 10m wind DOI: 10.24381/cds.adbb2d47"
+    sst: "CMC 0.1 deg SST V3.0 DOI: 10.5067/GHCMC-4FM03"
+    oscar: "Ocean Surface Current Analyses Real-time (OSCAR) Surface Currents - Interim 0.25 Degree (Version 2.0)"
+  summary: "Higher quality than NRT currents, but lesser quality than final currents."
+  id: "OSCAR_L4_OC_INTERIM_V2.0"
+  doi: "10.5067/OSCAR-25I20"
+  fields:
+    - "Ugi"
+    - "Uwi"
+    - "Ubi"
+    - "OSCARi"
+  output_dir_cmems: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS"
+  output_dir_neurost: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST"
+  currents_cmems_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS'
+  currents_neurost_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST'
+  currents_cmems_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/CMEMS'
+  currents_neurost_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST'
+  output_file_prefix: "oscar_currents_"
+
+vaidation:
+  dates_to validate:
+  validation_dir:
+
+
+explanations:
+- "Figure 1 compares observed drifter velocities to OSCAR fields (CMEMS & NEUROST) with two scatter plots: zonal (u/ve) and meridional (v/vn). Points clustering along the 1:1 line indicate the models track the drifter magnitudes reasonably well, while spreads at higher speeds reflect growing model–observation divergence typical of energetic currents. These panels set the baseline visual agreement before looking at aggregated metrics." 
+- "Figure 2 summarizes skill with bar charts of R², RMSE, and Bias for CMEMS/NEUROST against drifters in Jan 2020. Higher R² bars indicate better linear agreement; lower RMSE bars mean smaller typical errors; Bias bars near zero mean little systematic over/underestimation. Together they provide a compact snapshot of relative model performance for u and v components." 
+- "Figure 3 maps the spatial correlation (R) between CMEMS zonal currents and drifters. High-R bands often coincide with strong, coherent flow regimes, while lower-R patches flag regions where local dynamics, sampling, or interpolation introduce mismatch. This view shows where the model–drifter relationship is strongest across the globe." 
+- "Figure 4 shows the NEUROST zonal correlation map. Comparing to Figure 3 reveals spatial patterns where NEUROST either matches or exceeds CMEMS in zonal agreement, as well as areas where both struggle—useful for targeting regional improvements." 
+- "Figure 5 is the CMEMS meridional (v) correlation map. Meridional skill can differ from zonal due to regional wind forcing and mesoscale anisotropy; this panel highlights where north–south components are more or less reliable than east–west." 
+- "Figure 6 is the NEUROST meridional correlation map. Side-by-side with Figure 5, it shows how NEUROST’s v-component agreement varies regionally, helping diagnose hemispheric or basin-specific behavior differences." 
+- "Figure 7 overlays a CMEMS–drifter u scatter with a univariate distribution (histogram). The stated slope (e.g., SL=0.50) quantifies the regression sensitivity; deviations from 1.0 indicate damping or amplification relative to drifters. The histogram contextualizes how errors are distributed across sampled speeds." 
+- "Figure 8 repeats the CMEMS comparison for v. The slope and spread reveal whether meridional currents are systematically under- or over-predicted, while the counts histogram indicates how much the evaluation is influenced by low vs. high-speed cases." 
+- "Figure 9 presents NEUROST vs drifter u with regression slope (e.g., SL≈0.55) and histogram. Comparing with Figure 7 helps assess whether NEUROST preserves zonal variability more faithfully (slope closer to 1) or shows different bias structures across the sampled range." 
+- "Figure 10 mirrors that analysis for NEUROST v (slope, scatter, histogram). It reveals whether meridional currents are attenuated or exaggerated relative to drifters and whether discrepancies cluster in particular velocity ranges." 
+- "Figure 11 displays the CMEMS zonal slope map (grid-cell OLS slope of model vs drifter u). Values near 1 imply faithful amplitude reproduction; <1 suggests damped variability; >1 indicates amplification. Spatial structure points to regions where model physics or sampling drive systematic scaling differences." 
+- "Figure 12 shows the CMEMS meridional slope map. Comparing with Figure 11 highlights anisotropy in amplitude fidelity—useful for diagnosing where north–south variability is harder to capture than east–west." 
+- "Figure 13 provides the NEUROST zonal slope map. Contrasting with the CMEMS zonal slope (Figure 11) reveals basins where NEUROST better preserves u variability or, conversely, where it tends to over/under-scale drifter amplitudes." 
+- "Figure 14 is the NEUROST meridional slope map. Jointly examining Figures 12 and 14 isolates regions where meridional structure is particularly challenging (e.g., western boundary currents, equatorial bands) and whether one product outperforms the other." 
+- "Figure 15 maps CMEMS zonal RMSD (m/s), the typical model–drifter u error magnitude per grid cell. Warm colors flag regions with larger discrepancies—often areas of sharp gradients or sparse sampling—while cooler colors indicate closer agreement."
+- "Figure 16 maps CMEMS meridional RMSD. Comparing to Figure 15 reveals whether v errors are systematically larger/smaller than u in specific regions, informing where anisotropic processes or wind-driven variability complicate meridional prediction." 
+- "Figure 17 shows NEUROST zonal RMSD. Juxtaposing with Figure 15 highlights where NEUROST reduces u error relative to CMEMS, and where both products share elevated RMSD, pointing to common challenges (e.g., mesoscale eddies)." 
+- "Figure 18 presents NEUROST meridional RMSD. Together with Figure 16, it clarifies whether NEUROST improves v error patterns and where remaining mismatches may reflect sampling gaps or unresolved dynamics." 
+- "Figure 19 maps the correlation between CMEMS residuals (model−drifter) and the drifter signal for u. Positive values imply residuals rise with the observed current—evidence of signal leakage or under-resolved variability—while negative values indicate over-correction; values near zero mean residuals are less tied to the signal." 
+- "Figure 20 repeats this residual–truth correlation for CMEMS v. Spatial patterns highlight where meridional errors co-vary with the drifter field—useful for diagnosing systematic tendencies (e.g., seasonal wind biases translating into v-structure errors)." 
+- "Figure 21 shows NEUROST u residual–truth correlation. Comparing with Figure 19 indicates whether NEUROST’s zonal errors are more orthogonal to the signal (desirable) or still correlated, which would suggest amplitude/phase issues." 
+- "Figure 22 provides NEUROST v residual–truth correlation. Together with Figure 20, it completes the error-structure view—pinpointing regions where residuals track the observed meridional flow and guiding targeted improvements in forcing or parameterizations."

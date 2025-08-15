@@ -7,6 +7,7 @@ import re
 import yaml
 from ..config.setup import *
 from datetime import datetime, timedelta
+import calendar
 
 def get_date_range(date_list):
     """
@@ -68,7 +69,7 @@ def load_ds(date_str, var):
                 ssh_src = ssh_src_neurost_interim
 
         search_dir = os.path.join(ssh_src, year, month)
-        pattern = ssh_pattern.replace("*", f"{day_str}_*")
+        pattern = ssh_pattern.replace("*", f"{day_str}*")
     elif var == "sst":
         search_dir = os.path.join(sst_src, year, month)
         pattern = f"{day_str}*CMC-L4_GHRSST-SSTfnd*.nc"
@@ -541,3 +542,20 @@ def check_wind(dates):
             return False
         
     return True
+
+from datetime import date
+import calendar
+
+def get_month_info(year_month_str):
+    '''takes a sring link "2020-07 and returns a '2020', '07', '01', '31'
+        in other words, the first day of the month and the last day of the month '''
+    year, month = map(int, year_month_str.split("-"))
+    month_str = f"{month:02d}"               # ensures '01', '09', etc.
+    first_day_str = "01"
+    last_day_str = f"{calendar.monthrange(year, month)[1]:02d}"
+    return str(year), month_str, first_day_str, last_day_str
+
+def get_drifter_monthly_file(drifter_src_dir, year, month):
+    filename = f"drifter_6hour_qc_{year}_{month}.nc"
+    file_path = os.path.join(drifter_src_dir, year, month, filename)
+    return file_path
