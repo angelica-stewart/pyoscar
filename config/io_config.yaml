@@ -1,19 +1,19 @@
 # === General Settings ===
 general:
-  do_currents: true
+  do_currents: false
   do_plots: false
-  do_validation: false
+  do_validation: true
   do_validation_plots: false
   do_download: false
   do_pdf: false
 
-  start_date: "1993-01-01"
-  end_date: "1993-02-28"
+  start_date: "2010-01-01"
+  end_date: "2010-02-28"
   override: true
   oscar_mode: "final"
   download_mode: "final"  # options: final, interim
   datadir: "/Users/stewarta/Desktop/oscarpy/datasets"
-  ssh_mode: 'neurost' #options: cmems, neurost, all
+  ssh_mode: 'cmems' #options: cmems, neurost, all
   sst_mode: 'cmc'
   wind_mode: 'era5'
   do_eq: true
@@ -62,9 +62,9 @@ ssh:
       file_pattern: "ssh_*.nc"
       data_source: "CMEMS"
     download:
-      download_dates_cmems: ["1993-01-01", "1993-02-28"]
+      download_dates_cmems: ["2010-01-01", "2010-02-28"]
       download_cmems: false
-      skip_existing: false
+      skip_existing: true
 
 
 
@@ -78,9 +78,9 @@ ssh:
       data_source: "NEURO_ST"
     
     download:
-      download_dates_neurost: ["1993-01-01", "1993-02-28"]
+      download_dates_neurost: ["2010-01-01", "2010-02-28"]
       download_neurost: false
-      skip_existing: false
+      skip_existing: true
     
 
 # === SST Input ===
@@ -93,9 +93,9 @@ sst:
       file_pattern: "*CMC-L4_GHRSST-SSTfnd-*.nc"
       data_source: "CMC"
     download:
-      download_dates_sst: ["1993-01-01", "1993-02-28"]
+      download_dates_sst: ["2010-01-01", "2010-02-28"]
       download_sst: false
-      skip_existing: false
+      skip_existing: true
       
 # === Wind ===
 wind:
@@ -110,9 +110,9 @@ wind:
     output:
       figures_dir: "/Users/stewarta/Desktop/NASA_OSCAR/oscarpydebug/preprocessing/figures"
     download:
-      download_dates_wind: ["1993-01-01", "1993-02-28"]
+      download_dates_wind: ["2010-01-01", "2010-02-28"]
       download_wind: false
-      skip_existing: false
+      skip_existing: true
 
 # === PO.DAAC Metadata ===
 podaac:
@@ -139,8 +139,8 @@ podaac:
 
 drifters:
   src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/DRIFTERS"
-  dates_to_validate_range: ['2020-01-01', '2020-01-31']
-  download_date: ["1993-01", "1993-02"]
+  dates_to_validate_range: ['2010-01-01', '2010-02-28']
+  download_date: ["2010-02"]
   download_drifter: true
 validation:   
   validation_dir: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/VALIDATION/'

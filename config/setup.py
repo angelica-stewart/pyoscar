@@ -34,6 +34,8 @@ download_dates_cmems = config['ssh']['cmems']['download']['download_dates_cmems'
 download_dates_neurost = config['ssh']['neurost']['download']['download_dates_neurost']
 download_cmems = config['ssh']['cmems']['download']['download_cmems']
 download_neurost = config['ssh']['neurost']['download']['download_neurost']
+skip_existing_cmems_download = config['ssh']['cmems']['download']['skip_existing']
+skip_existing_neurost_download = config['ssh']['neurost']['download']['skip_existing']
 
 sst_mode = config['general']['sst_mode']
 sst = config['sst'][sst_mode]['input']
@@ -42,6 +44,7 @@ sst_pattern = sst['file_pattern']
 sst_src = sst['src_dir']
 download_dates_sst = config['sst'][sst_mode]['download']['download_dates_sst']
 download_sst = config['sst'][sst_mode]['download']['download_sst']
+skip_existing_cmc_download = config['sst']['cmc']['download']['skip_existing']
 
 wind_mode = config['general']['wind_mode']
 wind = config['wind'][wind_mode]['input']
@@ -51,6 +54,7 @@ wind_pattern = wind['file_pattern']
 wind_src = wind['src_dir']
 download_dates_wind = config['wind'][wind_mode]['download']['download_dates_wind']
 download_wind = config['wind'][wind_mode]['download']['download_wind']
+skip_existing_era5_download = config['wind']['era5']['download']['skip_existing']
 
 do_eq = config['general']['do_eq']
 

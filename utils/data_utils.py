@@ -10,10 +10,6 @@ from datetime import datetime, timedelta
 import calendar
 
 def get_date_range(date_list):
-    """
-    Given a list of two date strings [start_date, end_date], return a list of all dates
-    (inclusive) between them in 'YYYY-MM-DD' format. Raise error if end < start.
-    """
     if len(date_list) != 2:
         raise ValueError("Input must be a list of exactly two date strings.")
 
@@ -25,6 +21,15 @@ def get_date_range(date_list):
 
     delta = (end_date - start_date).days
     return [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(delta + 1)]
+
+
+def to_date_list(dates):
+    if len(dates) == 1:
+        return [dates[0]]
+    if len(dates) == 2:
+        return get_date_range(dates)  # your existing helper
+    raise ValueError("date list must contain 1 or 2 dates (start and end).")
+
 
 def get_file_path(date, ssh_mode_val = None):
     dt = datetime.strptime(date, "%Y-%m-%d")
@@ -105,9 +110,6 @@ def load_ds(date_str, var):
         ds['sst'].values = ocean_temp
 
     elif var == "wind":
-        # start_dt = np.datetime64(date_obj)
-        # end_dt = np.datetime64(next_day_obj)  - np.timedelta64(1, 'ns')
-        # ds = ds.sel(time=slice(start_dt, end_dt))
         ds = ds.rename({'valid_time': 'time'})
         ds = xr.merge([ds['u10'], ds['v10']])
 
@@ -469,82 +471,106 @@ def parse_dates(dates):
 
 
 
-def ready_for_oscar_mode(dates, oscar_mode, ssh_mode):
-    if check_wind(dates) and check_sst(dates) and check_ssh(dates, oscar_mode, ssh_mode):
-        return True
-    return False
 
 
-def check_ssh(dates,oscar_mode, ssh_mode):
+import os, glob
+
+def check_ssh(dates, oscar_mode, ssh_mode, return_missing=False):
+    """
+    Returns:
+      - if return_missing=False: bool
+      - if return_missing=True: (bool, missing_list)
+        where missing_list contains expected file paths or patterns per date
+    """
     if oscar_mode == "final":
-        if ssh_mode == "cmems":
-            ssh_root = ssh_src_cmems_final
-        else:
-            ssh_root = ssh_src_neurost_final
+        ssh_root = ssh_src_cmems_final if ssh_mode == "cmems" else ssh_src_neurost_final
     else:
-        if ssh_mode == "cmems":
-            ssh_root = ssh_src_cmems_interim
-        else:
-            ssh_root = ssh_src_neurost_interim
+        ssh_root = ssh_src_cmems_interim if ssh_mode == "cmems" else ssh_src_neurost_interim
+
+    missing = []
 
     for d in dates:
         y = d[:4]
         m = d[5:7]
         d_str = d.replace("-", "")
-
         folder = os.path.join(ssh_root, y, m)
+
         if ssh_mode == "cmems":
-            filename = f"ssh_{d_str}.nc"
-            file_path = os.path.join(folder, filename)
-            exists = os.path.exists(file_path)
-
-        elif ssh_mode == "neurost":
+            file_path = os.path.join(folder, f"ssh_{d_str}.nc")
+            if not os.path.exists(file_path):
+                missing.append(file_path)
+        else:  # 'neurost'
             pattern = os.path.join(folder, f"NeurOST_SSH-SST_{d_str}_*.nc")
-            matches = glob.glob(pattern)
-            exists = len(matches) > 0
+            if len(glob.glob(pattern)) == 0:
+                missing.append(pattern)
 
-        if not exists:
- 
-            return False
-        
+    ok = (len(missing) == 0)
+    return (ok, missing) if return_missing else ok
 
-    return True
 
-def check_sst(dates):
+def check_sst(dates, return_missing=False):
+    missing = []
     for d in dates:
         y = d[:4]
         m = d[5:7]
         d_str = d.replace("-", "")
-
         folder = os.path.join(sst_src, y, m)
-        filename_pattern = f"{d_str}*.nc"
-        file_path = os.path.join(folder, filename_pattern)
-        matches = glob.glob(file_path)
-        exists = len(matches) > 0
-        if not exists:
-            return False
-        
+        pattern = os.path.join(folder, f"{d_str}*.nc")
+        if len(glob.glob(pattern)) == 0:
+            missing.append(pattern)
+    ok = (len(missing) == 0)
+    return (ok, missing) if return_missing else ok
 
-    return True
 
-def check_wind(dates):
+def check_wind(dates, return_missing=False):
+    missing = []
     for d in dates:
         y = d[:4]
         m = d[5:7]
         d_str = d.replace("-", "")
-
         folder = os.path.join(wind_src, y, m)
-        filename = f"era5_{d_str}.nc"
-      
-        file_path = os.path.join(folder, filename)
-        exists = os.path.exists(file_path)
-        if not exists:
-            return False
-        
-    return True
+        file_path = os.path.join(folder, f"era5_{d_str}.nc")
+        if not os.path.exists(file_path):
+            missing.append(file_path)
+    ok = (len(missing) == 0)
+    return (ok, missing) if return_missing else ok
 
-from datetime import date
-import calendar
+
+def ready_for_oscar_mode(dates, oscar_mode, ssh_mode, report=False):
+    """
+    If report=False: returns bool.
+    If report=True:  returns (bool, {"ssh": [...], "sst": [...], "wind": [...]})
+                     Only includes keys with missing items.
+    """
+    ok_ssh, miss_ssh = check_ssh(dates, oscar_mode, ssh_mode, return_missing=True)
+    ok_sst, miss_sst = check_sst(dates, return_missing=True)
+    ok_wind, miss_wind = check_wind(dates, return_missing=True)
+
+    ok_all = ok_ssh and ok_sst and ok_wind
+    if not report:
+        return ok_all
+
+    missing = {}
+    if miss_ssh:  missing["ssh"]  = miss_ssh
+    if miss_sst:  missing["sst"]  = miss_sst
+    if miss_wind: missing["wind"] = miss_wind
+    return ok_all, missing
+
+
+# Optional: quick pretty-printer
+def print_missing(missing_dict):
+    if not missing_dict:
+        print("✅ All required files are present.")
+        return
+    print("❌ Missing files/patterns:")
+    for k, items in missing_dict.items():
+        print(f"  - {k}:")
+        for p in items:
+            print(f"      {p}")
+
+
+
+
 
 def get_month_info(year_month_str):
     '''takes a sring link "2020-07 and returns a '2020', '07', '01', '31'

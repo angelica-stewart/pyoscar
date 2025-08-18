@@ -7,6 +7,32 @@ from ..config.setup import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+def dedup_full_match(ds):
+    if "drifter" not in ds.dims:
+        raise ValueError("Expected a 'drifter' dimension.")
+
+    cols = [
+        "time", "latitude", "longitude",
+        "ve", "vn", "ID",
+        "cmems_ve", "cmems_vn", "neurost_ve", "neurost_vn",
+    ]
+    missing = [c for c in cols if (c not in ds and c not in ds.coords)]
+    if missing:
+        raise ValueError(f"Dataset is missing required variables/coords: {missing}")
+
+    # Flatten, compute which rows to keep, then map back to xarray indices
+    df = ds.reset_coords(drop=False).to_dataframe().reset_index()  # 'drifter' becomes a column
+    df_keep = df.drop_duplicates(subset=cols, keep='first')
+
+    keep_idx = df_keep["drifter"].to_numpy()  # positional indices along 'drifter'
+    ds_out = ds.isel(drifter=keep_idx)
+
+    # Nice-to-have ordering
+    if "time" in ds_out:
+        ds_out = ds_out.sortby("time")
+
+    return ds_out
+
 def append_to_master(year, month):
     master_path = os.path.join(validation_dir, 'validation_master.nc')
     monthly_path = os.path.join(validation_dir, year,f'validation_{year}_{month}.nc' )
@@ -16,20 +42,27 @@ def append_to_master(year, month):
     ds_month = xr.open_dataset(monthly_path)
 
 
-    #print(ds_month.dims)
+
     if os.path.exists(master_path):
         ds_master = xr.open_dataset(master_path)
-        print(ds_master.dims)
+        
         ds_updated_master = xr.concat([ds_master, ds_month], dim="drifter").sortby("time")
+        print(ds_updated_master.dims)
+        ds_updated_master_dedup = dedup_full_match(ds_updated_master)
+        print(ds_updated_master_dedup.dims)
+       
+        #REMOVE DUPLICATES HERE 
     else:
+        
         print('Your master path does not exist and is assuming that theis is the first time you are running OSCAR')
-        ds_updated_master = ds_month
+        ds_updated_master_dedup = ds_month
+        print(ds_updated_master_dedup.dims)
 
     # make a tmp path with os.path, then atomic replace
     base, ext = os.path.splitext(master_path)      # (".../validation_master", ".nc")
     tmp = f"{base}.tmp{ext}"                       # ".../validation_master.tmp.nc"
 
-    ds_updated_master.to_netcdf(tmp)
+    ds_updated_master_dedup.to_netcdf(tmp)
     os.replace(tmp, master_path)                   # atomic on POSIX/Windows
 
     ds_month.close()
@@ -91,3 +124,4 @@ def save_plots_to_pdf(
             caption_artist.remove()
 
     os.replace(tmp, pdf_path)
+    print('-- All DONE -- ')

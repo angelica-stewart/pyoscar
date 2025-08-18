@@ -276,23 +276,23 @@ def compare_velocity_components(ds_oscar, ds_drifter):
         if len(model_clean) == 0:
             results[label] = {
                 'R2': np.nan,
-                'RMSE': np.nan,
-                'Bias': np.nan,
+                'RMSD': np.nan,
+                'Difference': np.nan,
                 'Pearson': np.nan,
                 'N_points': 0
             }
             continue
 
         # Compute metrics
-        rmse = mean_squared_error(obs_clean, model_clean)
+        rmsd = mean_squared_error(obs_clean, model_clean)
         r2 = r2_score(obs_clean, model_clean)
-        bias = np.mean(model_clean - obs_clean)
+        difference = np.mean(model_clean - obs_clean)
         corr, _ = pearsonr(model_clean, obs_clean)
 
         results[label] = {
             'R2': r2,
-            'RMSE': rmse,
-            'Bias': bias,
+            'RMSD': rmsd,
+            'Difference': difference,
             'Pearson': corr,
             'N_points': len(obs_clean)
         }
@@ -302,7 +302,7 @@ def compare_velocity_components(ds_oscar, ds_drifter):
 def plot_velocity_comparison(obs, model, component='u', limits=(-1, 1)):
     """
     Scatter plot comparing drifter (obs) vs model (OSCAR) velocity component.
-    Computes and displays R², RMSE, Bias, and Pearson correlation.
+    Computes and displays R², RMSD, Difference, and Pearson correlation.
 
     Parameters:
         obs (np.ndarray): Drifter data (ve or vn)
@@ -319,8 +319,8 @@ def plot_velocity_comparison(obs, model, component='u', limits=(-1, 1)):
 
     # Metrics
     r2 = r2_score(obs_clean, model_clean)
-    rmse = np.sqrt(mean_squared_error(obs_clean, model_clean))
-    bias = np.mean(model_clean - obs_clean)
+    rmsd = np.sqrt(mean_squared_error(obs_clean, model_clean))
+    difference = np.mean(model_clean - obs_clean)
     corr, _ = pearsonr(obs_clean, model_clean)
 
     # Plot
@@ -339,8 +339,8 @@ def plot_velocity_comparison(obs, model, component='u', limits=(-1, 1)):
     # Metrics annotation box
     text = (
         f"R²: {r2:.3f}\n"
-        f"RMSE: {rmse:.3f} m/s\n"
-        f"Bias: {bias:.3f} m/s\n"
+        f"RMSD: {rmsd:.3f} m/s\n"
+        f"Difference: {difference:.3f} m/s\n"
         f"Pearson: {corr:.3f}\n"
         f"N: {len(obs_clean)}"
     )
@@ -445,6 +445,7 @@ def get_unique_drifter_daily_avg(ds, output_folder):
     os.makedirs(output_folder, exist_ok=True)
     unique_ids = np.unique(ds['ID'].values)
 
+
     for drifter_id in unique_ids:
         
         mask = ds['ID'] == drifter_id
@@ -452,8 +453,12 @@ def get_unique_drifter_daily_avg(ds, output_folder):
         drifter_ds = drifter_ds.sortby('time')
         daily_ds = drifter_ds.resample(time='1D').mean()
         daily_ds['ID'] = xr.DataArray(np.full(daily_ds.dims['time'], drifter_id), dims='time')
+       
         outfile = os.path.join(output_folder, f"drifter_{drifter_id}_daily_avg.nc")
+        print(f'Daily averages for driffer: {drifter_id} is computed and saved at {outfile}')
         daily_ds.to_netcdf(outfile)
+
+        
 
 
 def get_daily_avg_all_drifters(unique_drifters_dir, daily_avg_dir, selected_date):
@@ -472,8 +477,11 @@ def get_daily_avg_all_drifters(unique_drifters_dir, daily_avg_dir, selected_date
     # Get all .nc files in folder
     file_list = sorted(glob(os.path.join(unique_drifters_dir, "*.nc")))
 
+
     for file in file_list:
         ds = xr.open_dataset(file)
+    
+
 
         if selected_date in ds['time']:
             try:
@@ -504,7 +512,6 @@ def get_daily_avg_all_drifters(unique_drifters_dir, daily_avg_dir, selected_date
         'ID': xr.DataArray(ids, dims='drifter'),
         'time': xr.DataArray([selected_date] * len(ids), dims='drifter')
     })
-    print(snapshot_ds.dims)
     # Convert to datetime object for formatting
     date_str = str(selected_date)[:10]  # 'YYYY-MM-DD'
     year, month, day = date_str.split('-')
@@ -566,7 +573,26 @@ def interpolate_oscar_to_drifters(ds_oscar, ds_drifter, u_var = 'u', v_var = 'v'
 
 #==============DRIFTER vs OSCAR ============#
 
-def plot_velocity_comparison_scatter(df):
+def summarize_time_jumps(df, col="time"):
+    s = df[col].astype(str).str.replace(r"\s+", "", regex=True)
+    d = pd.to_datetime(s, errors="coerce").dropna().dt.normalize()
+    u = d.sort_values().drop_duplicates().reset_index(drop=True)
+    if u.empty:
+        return {"ranges": [], "breakpoints": [], "summary": "", "years": [], "year_months": [], "unique_days": 0}
+
+    diff = u.diff().dt.days
+    starts = [0] + [i for i, v in enumerate(diff.iloc[1:], start=1) if v != 1]
+    ends   = [i - 1 for i in starts[1:]] + [len(u) - 1]
+
+    ranges = [(u.iloc[s], u.iloc[e]) for s, e in zip(starts, ends)]
+    bps = [ranges[0][0]] + [r[0] for r in ranges[1:]] + [ranges[-1][1]]
+    summary = " to ".join(ts.strftime("%Y-%m-%d") for ts in bps)
+
+    return summary
+        
+ 
+def plot_velocity_comparison_scatter(df, temporal_range):
+    
     fig = plt.figure(figsize=(14, 6))
 
     # ---- Zonal (U / ve) ----
@@ -576,7 +602,7 @@ def plot_velocity_comparison_scatter(df):
     ax1.plot([-2, 2], [-2, 2], 'k--', linewidth=1)  # 1:1 line
     ax1.set_xlabel("Drifter Zonal Velocity(m/s)")
     ax1.set_ylabel("OSCAR Zonal Velocity (m/s)")
-    ax1.set_title("Zonal Velocity Comparison (1993 - Present)")
+    ax1.set_title(f"Zonal Velocity Comparison {temporal_range}")
     ax1.legend()
     ax1.grid(True)
 
@@ -587,7 +613,7 @@ def plot_velocity_comparison_scatter(df):
     ax2.plot([-2, 2], [-2, 2], 'k--', linewidth=1)  # 1:1 line
     ax2.set_xlabel("Drifter Zonal Velocity (m/s)")
     ax2.set_ylabel("OSCAR Zonal Velocity (m/s)")
-    ax2.set_title("Meridional Velocity Comparison (1993-Present)")
+    ax2.set_title(f"Meridional Velocity Comparison {temporal_range}")
     ax2.legend()
     ax2.grid(True)
 
@@ -598,7 +624,7 @@ def plot_velocity_comparison_scatter(df):
 
 
 
-def plot_validation_metrics(df, models, components):
+def plot_validation_metrics(df, temporal_range, models, components):
     def compute_metrics(y_true, y_pred):
         # Flatten and mask NaNs
         y_true = np.array(y_true).flatten()
@@ -609,25 +635,25 @@ def plot_validation_metrics(df, models, components):
         y_pred_clean = y_pred[mask]
 
         # Metrics
-        bias = np.mean(y_pred_clean - y_true_clean)
-        rmse = np.sqrt(np.mean((y_pred_clean - y_true_clean) ** 2))
+        difference = np.mean(y_pred_clean - y_true_clean)
+        rmsd = np.sqrt(np.mean((y_pred_clean - y_true_clean) ** 2))
         r2 = 1 - (np.sum((y_true_clean - y_pred_clean) ** 2) / 
                   np.sum((y_true_clean - np.mean(y_true_clean)) ** 2))
 
-        return r2, rmse, bias
+        return r2, rmsd, difference
 
     # Compute metrics for each model & component
     metrics = {}
     for model in models:
         for component in components:
-            r2, rmse, bias = compute_metrics(
+            r2, rmsd, difference = compute_metrics(
                 df[component].values, 
                 df[f"{model}_{component}"].values
             )
             metrics[f"{model}_{component}"] = {
                 'R²': r2,
-                'RMSE': rmse,
-                'Bias': bias
+                'RMSD': rmsd,
+                'Difference': difference
             }
 
     # Plot metrics
@@ -650,7 +676,7 @@ def plot_validation_metrics(df, models, components):
         ax.set_ylabel(metric_name)
         ax.grid(True)
 
-    plt.suptitle("Validation Metrics: CMEMS & NEUROST vs Drifters (1993 - Present)", fontsize=14)
+    plt.suptitle(f"Validation Metrics: CMEMS & NEUROST vs Drifters {temporal_range}", fontsize=14)
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     
     return fig
@@ -703,6 +729,7 @@ def compute_binned_correlations(
 
 
 def plot_binned_correlation_map(
+    temporal_range,
     corr_df,
     model,
     component,
@@ -735,9 +762,9 @@ def plot_binned_correlation_map(
     # Title
     comp_name = 'Zonal' if component == 've' else 'Meridional'
     if title_prefix:
-        title = f"{title_prefix} — {model.upper()} vs Drifters ({comp_name})"
+        title = f"{title_prefix} — {model.upper()} vs Drifters ({comp_name} on {temporal_range})"
     else:
-        title = f"{model.upper()} vs Drifters ({comp_name})"
+        title = f"{model.upper()} vs Drifters ({comp_name} on {temporal_range})"
     ax.set_title(title, fontsize=13)
 
     cbar = plt.colorbar(mesh, ax=ax, orientation='vertical', fraction=0.03, pad=0.02)
@@ -751,6 +778,7 @@ def plot_binned_correlation_map(
 
 def plot_density(
     df,
+    temporal_range,
     model_prefix: str,            # 'cmems' or 'neurost'
     component: str,               # 've' or 'vn'
     model_label: str,             # 'CMEMS' or 'NEUROST'
@@ -804,7 +832,7 @@ def plot_density(
 
     # labels, limits, titles
     ax.set_xlim(xlim); ax.set_ylim(ylim)
-    ax.set_title(f"{'Log ' if log else ''}histogram {model_label} {comp_label}", fontsize=12)
+    ax.set_title(f"{'Log ' if log else ''}histogram {model_label} {comp_label} {temporal_range}", fontsize=12)
     ax.set_xlabel(f"Drifter {comp_label} (m/s)")
     ax.set_ylabel(f"OSCAR {comp_label} (m/s)")
 
@@ -825,7 +853,7 @@ def plot_density(
     return fig
 
 
-def make_slope_map(df_in, truth_col, model_col, title):
+def make_slope_map(df_in,truth_col, model_col, title):
     """
     Compute per-grid-cell OLS slope between truth_col and model_col,
     plot the slope field, and return the figure object.

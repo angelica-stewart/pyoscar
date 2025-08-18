@@ -1,7 +1,7 @@
 general:
   do_download:
   do_currents:
-  do_currents_checks:
+  do_currents_plots:
   do_validation:
   update_pdf:
 
@@ -37,10 +37,10 @@ currents:
   wind_mode:
   do_eq:
   ssh:
+    var:
     cmems:
       src_dir_cmems_interim: 
       src_dir_cmems_final:
-      var:
       file_prefix:
       file_pattern:
       data_source:
@@ -68,6 +68,12 @@ currents:
       file_pattern:
       data_source:
 
+plot_currents:
+  ssh_mode:
+  dates_to_plot:
+  region:
+  save_path:
+  oscar_mode:
 
 podaac:
   description:
