@@ -1,172 +1,22 @@
 # === General Settings ===
 general:
-  do_currents: false
-  do_plots: false
+  do_download: true
+  do_currents: true
+  plot_currents: true
   do_validation: true
-  do_validation_plots: false
-  do_download: false
-  do_pdf: false
+ 
+  override_download: true
 
-  start_date: "2010-01-01"
-  end_date: "2010-02-28"
-  override: true
-  oscar_mode: "final"
-  download_mode: "final"  # options: final, interim
-  datadir: "/Users/stewarta/Desktop/oscarpy/datasets"
-  ssh_mode: 'cmems' #options: cmems, neurost, all
-  sst_mode: 'cmc'
-  wind_mode: 'era5'
+
+  start_date: "2012-01-01"
+  end_date: "2012-01-01"
+  override_current: true
+  ssh_mode: 'cmems' #options: cmems, neurost,..error when "both".. fix that
   do_eq: true
-  validation_mode: 'final'
-
-plots:
-  ssh_mode: "neurost" #cmems or neurost
-  currents:
-    dates_to_plot: ["2020-01-01"] #single date or range
-    region: "caribbean" #options: gulfstream, indian ocean, caribbean, global, austrailia_nz
-    plot_configuration:
-      vector_quiver: true
-    output_settings:
-      save_plots: true
-      show_plots: false
-      output_dir: ""
-    save_path: "/Users/stewarta/Desktop/oscarpy/diagnostics/currents/figures"
-  validation:
-    dates_to_validate: ["2020-01-01"]
-    plot_configuration:
-      histogram: true 
-      metricss:
-        - r2
-        - rmse
-        - b
-
-diagnostics:
-  nrt:
-    interp_grad_fig: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/interp_grad/figures/"
-    interp_grad_data: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/interp_grad/data/"
-    computation_fig: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/computation/figures/"
-    computation_data: "/Users/stewarta/Desktop/oscarpy/diagnostics/nrt/computation/data/"
-  currents:
-    region: "caribbean" #options: gulfstream, indian ocean, caribbean, earth, austrailia_nz 
-    fig_root: "/Users/stewarta/Desktop/oscarpy/diagnostics/currents/figures"
 
 
-# === SSH ===
-ssh:
-  cmems:
-    input: 
-      src_dir_cmems_interim: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/INTERIM/CMEMS/SRC/"
-      src_dir_cmems_final: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/FINAL/CMEMS/SRC/"
-      var: "ssh"
-      file_prefix: "nrt_"
-      file_pattern: "ssh_*.nc"
-      data_source: "CMEMS"
-    download:
-      download_dates_cmems: ["2010-01-01", "2010-02-28"]
-      download_cmems: false
-      skip_existing: true
-
-
-
-  neurost:
-    input:
-      src_dir_neurost_interim: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/INTERIM/NEUROST/SRC/"
-      src_dir_neurost_final: "/Users/stewarta/Desktop/oscarpy/datasets/SSH/FINAL/NEUROST/SRC"
-      var: "ssh"
-      file_prefix: "nrt_"
-      file_pattern: "NeurOST_SSH-SST_*.nc"
-      data_source: "NEURO_ST"
-    
-    download:
-      download_dates_neurost: ["2010-01-01", "2010-02-28"]
-      download_neurost: false
-      skip_existing: true
-    
-
-# === SST Input ===
-sst:
-  cmc:
-    input: 
-      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/SST/CMC/SRC/"
-      var: "sst"
-      file_prefix: "sst_"
-      file_pattern: "*CMC-L4_GHRSST-SSTfnd-*.nc"
-      data_source: "CMC"
-    download:
-      download_dates_sst: ["2010-01-01", "2010-02-28"]
-      download_sst: false
-      skip_existing: true
-      
-# === Wind ===
-wind:
-  era5:
-    input:
-      src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/WIND/ERA5/SRC/"
-      var_u: "u10"
-      var_v: "v10"
-      file_prefix: "era5_"
-      file_pattern: "ERA5_*.nc"
-      data_source: "ERA5"
-    output:
-      figures_dir: "/Users/stewarta/Desktop/NASA_OSCAR/oscarpydebug/preprocessing/figures"
-    download:
-      download_dates_wind: ["2010-01-01", "2010-02-28"]
-      download_wind: false
-      skip_existing: true
-
-# === PO.DAAC Metadata ===
-podaac:
-  description:
-    ssh: "CMEMS SSALTO/DUACS SEALEVEL_GLO_PHY_L4_NRT_OBSERVATIONS_008_046 DOI: 10.48670/moi-00149"
-    wind: "ECMWF ERA5 10m wind DOI: 10.24381/cds.adbb2d47"
-    sst: "CMC 0.1 deg SST V3.0 DOI: 10.5067/GHCMC-4FM03"
-    oscar: "Ocean Surface Current Analyses Real-time (OSCAR) Surface Currents - Interim 0.25 Degree (Version 2.0)"
-  summary: "Higher quality than NRT currents, but lesser quality than final currents."
-  id: "OSCAR_L4_OC_INTERIM_V2.0"
-  doi: "10.5067/OSCAR-25I20"
-  fields:
-    - "Ugi"
-    - "Uwi"
-    - "Ubi"
-    - "OSCARi"
-  output_dir_cmems: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS"
-  output_dir_neurost: "/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST"
-  currents_cmems_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/CMEMS'
-  currents_neurost_final: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/FINAL/PODAAC/NEUROST'
-  currents_cmems_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/CMEMS'
-  currents_neurost_interim: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/INTERIM/PODAAC/NEUROST'
-  output_file_prefix: "oscar_currents_"
-
-drifters:
-  src_dir: "/Users/stewarta/Desktop/oscarpy/datasets/DRIFTERS"
-  dates_to_validate_range: ['2010-01-01', '2010-02-28']
-  download_date: ["2010-02"]
-  download_drifter: true
-validation:   
-  validation_dir: '/Users/stewarta/Desktop/oscarpy/datasets/CURRENTS/VALIDATION/'
+plot_currents:
+  region: "global" #options: gulfstream, indian ocean, caribbean, global, austrailia_nz
   
-
-
-explanations:
-  - "Scatter of drifter vs CMEMS/NEUROST zonal velocity; points cluster near 1:1 with mild spread at high speeds."
-  - "barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot barplot"
-  - "correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1 correlation map1"
-  - "correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2 correlation map2"
-  - "correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3 correlation map3"
-  - "correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4 correlation map4"
-  - "linear"
-  - "linear again"
-  - "linear again"
-  - "linearrrr"
-  - "slope map"
-  - "slope mapp"
-  - "slope mappp"
-  - "slope mapppp"
-  - "rms map"
-  - "rmss mappp"
-  - "rmsss mappp"
-  - "rms map"
-  - "residual corr"
-  - "ress cor"
-  - "residual corre"
-  - "ress corrr"
+#note_to_self.. 
+#neurost has data from 2010, currently cannont validate without neurost, wll fix that 

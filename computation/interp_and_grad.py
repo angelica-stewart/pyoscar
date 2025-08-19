@@ -5,14 +5,14 @@ from ..config.setup import *
 
 
 def interpolate_dataset(ds):
-     if ssh_mode == "neurost":
+     if SSH_MODE == "neurost":
         lon = np.arange(0, 360, 0.1)
         lat = np.arange(-89.75, 90.0, 0.1)
-     elif ssh_mode  == "cmems":
+     elif SSH_MODE  == "cmems":
         lon = np.arange(0, 360, 0.25)
         lat = np.arange(-89.75, 90.0, 0.25)
      else:
-        raise ValueError(f"Unknown SSH source '{ssh_mode}'. Expected 'neurost' or 'cmems'.")
+        raise ValueError(f"Unknown SSH source '{SSH_MODE}'. Expected 'neurost' or 'cmems'.")
      
 
 

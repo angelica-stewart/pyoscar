@@ -14,21 +14,23 @@ import os, glob
 
 warnings.filterwarnings("ignore")
 
-def run_compute_currents(dates_to_process):
+def run_compute_currents(dates_to_process, oscar_mode, save_file, ssh_pattern, ssh_mode_list_val = None):
+    print(ssh_mode_list_val)
     for date in dates_to_process:
         
         # SSH
-        ssh_ds = load_ds(date, var=ssh_var)
+        print(ssh_pattern)
+        ssh_ds = load_ds(date, oscar_mode, var='ssh', ssh_pattern = ssh_pattern, ssh_mode_list_val = ssh_mode_list_val)
         ssh_ds = interpolate_dataset(ssh_ds)
-        ssh_ds = calculate_gradient(ssh_ds, ssh_var)
+        ssh_ds = calculate_gradient(ssh_ds, 'ssh')
 
         # SST
-        sst_ds = load_ds(date, var=sst_var)
+        sst_ds = load_ds(date, oscar_mode, var='sst')
         sst_ds = interpolate_dataset(sst_ds)
-        sst_ds = calculate_gradient(sst_ds, sst_var)
+        sst_ds = calculate_gradient(sst_ds, 'sst')
 
         # Wind
-        wind_ds = load_ds(date, var='wind')
+        wind_ds = load_ds(date, oscar_mode, var='wind')
         wind_ds = interpolate_dataset(wind_ds)
 
         # Compute and write OSCAR
@@ -36,38 +38,27 @@ def run_compute_currents(dates_to_process):
         print(f"The currents computation for {date} is starting now...")
         Ug, Uw, Ub = compute_surface_currents(ssh_ds, wind_ds, sst_ds, do_eq)
 
-        write_oscar_to_podaac(ref_ds, Ug, Uw, Ub, podaacfile, podaacdir,
+        write_oscar_to_podaac(ref_ds, Ug, Uw, Ub, save_file, podaacdir,
                               ssh_long_desc, wind_long_desc, sst_long_desc,
                               oscar_long_desc, oscar_summary, oscar_id,
-                              doi, ssh_mode)
+                              doi, SSH_MODE)
         print(f"Finished computing currents for {date}")
     print(f"ALL CURRENTS COMPUTATION FOR {dates_to_process[0]} - {dates_to_process[-1]} IS COMPLETED AND SAVED FOR PODAAC")
 
-def run_plotting(dates):
-    if len(dates) == 1:
-        date_list = [dates[0]]
-    elif len(dates) == 2:
-        date_list = get_date_range(dates)
-    else:
-        raise ValueError("date list must contain 1 or 2 dates (start and end).")
+def run_plotting(dates, oscar_mode):
 
-    for date in date_list:
-        ds_path= get_file_path(date)
+    for date in dates:
+        ds_path= get_file_path(date, oscar_mode)
         title = get_title(date)
         ds = xr.open_dataset(ds_path)
         u, v, lon, lat, speed, lon2d, lat2d = extract_data(ds)
-        plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode_plots)
+        plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, SSH_MODE)
 
 def run_validation(dates):
     #1) create list of dates 
-    date_list = to_date_list(dates)
-    # #1) create list of dates 
-    # if len(dates) == 1:
-    #     date_list = [dates[0]]
-    # elif len(dates) == 2:
-    #     date_list = get_date_range(dates)
-    # else:
-    #     raise ValueError("date list must contain 1 or 2 dates (start and end).")
+
+    validation_mode = determine_validation_mode(dates)
+    
 
     by_month = defaultdict(list)
 
@@ -75,7 +66,7 @@ def run_validation(dates):
     
     #2)Setting up the CMEMS and NEUROST directory depending on the Validation Mode: 'final' or 'interim'
         # 2a) loop through the list of dates and set up the folders for validation down the line. 
-    for date in date_list:
+    for date in dates:
         year, month, day_str = date.split("-")
         if validation_mode =='final':
             cmems_dir = os.path.join(currents_cmems_final, year, month)
@@ -291,64 +282,86 @@ def run_validation(dates):
 
     
     save_plots_to_pdf(
-        figs,
-        explanations,
-        pdf_path="validation_report.pdf",
-        metadata={"Title":"Validation Report","Author":"OSCAR"})
+            figs,
+            explanations,
+            pdf_path="validation_report.pdf",
+            metadata={"Title":"Validation Report","Author":"OSCAR"})
             
     
     return
 
-def run_download():
-    
-    if download_cmems:
-        dates = parse_dates(download_dates_cmems)
-        download_ssh_cmems(dates)
-    if download_neurost:
-        dates = parse_dates(download_dates_neurost)
-        download_ssh_neurost(dates)
+def run_download(dates):
 
+        
+    download_ssh_cmems(dates)
 
-    if download_wind:
-        dates = parse_dates(download_dates_wind)
-        download_wind_era5(dates)
-    
-    if download_sst:
-        dates = parse_dates(download_dates_sst)
-        download_sst_cmc(dates)
+    download_ssh_neurost(dates)
 
-    if download_drifter:
-        download_drifter_data(drifter_download_date)
+    download_wind_era5(dates)
+
+    download_sst_cmc(dates)
+
+    download_drifter_data(dates)
 
     return
 
 def main():
     np.seterr(divide='ignore', invalid='ignore', over='ignore')
-    start_dt = np.datetime64(start_date)
-    end_dt = np.datetime64(end_date)
+    start_dt = np.datetime64(START_DATE)
+    end_dt = np.datetime64(END_DATE)
     dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
 
-    if do_download:
-        run_download()
+    if DO_DOWNLOAD:
+        print("STARTING DOWNLOAD...")
+        run_download(dates_to_process)
 
-    ok, missing = ready_for_oscar_mode(dates_to_process, oscar_mode, ssh_mode, report=True)
-    if ok:
-        if do_currents:
-            np.seterr(divide='ignore', invalid='ignore', over='ignore')
-            start_dt = np.datetime64(start_date)
-            end_dt = np.datetime64(end_date)
-            dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
-            run_compute_currents(dates_to_process)
-    else:
-        print("you have missing files")
-        print_missing(missing)
+    
+    if len(dates_to_process) != 0:
+        if DO_CURRENTS:
+            print("STARTING CURRENTS")
+            ssh_mode_list = ['cmems', 'neurost']
+            if SSH_MODE == 'both':
+                
+                for ssh in ssh_mode_list:
+                    if ssh == 'cmems':
+                        SSH_PATTERN = "ssh_*.nc"
+                    elif ssh == 'neurost':
+                        SSH_PATTERN = "NeurOST_SSH-SST_*.nc"
+                    print(f"STARTING CURRENTS for {ssh}")
+            
+                    np.seterr(divide='ignore', invalid='ignore', over='ignore')
+                    start_dt = np.datetime64(START_DATE)
+                    end_dt = np.datetime64(END_DATE)
+                    dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
+                    oscar_mode = determine_oscar_mode(dates_to_process, ssh)
+                    save_file = f"oscar_currents_{oscar_mode}"
+                    run_compute_currents(dates_to_process, oscar_mode, save_file, SSH_PATTERN, ssh)
+                    run_plotting(dates_to_process, oscar_mode)
+                    
+            else:
+                if SSH_MODE == 'cmems':
+                    SSH_PATTERN = "ssh_*.nc"
+                elif SSH_MODE == 'neurost':
+                    SSH_PATTERN = "NeurOST_SSH-SST_*.nc"
+                np.seterr(divide='ignore', invalid='ignore', over='ignore')
+                start_dt = np.datetime64(START_DATE)
+                end_dt = np.datetime64(END_DATE)
+                dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
+                oscar_mode = determine_oscar_mode(dates_to_process, SSH_MODE)
+                save_file = f"oscar_currents_{oscar_mode}"
+                run_compute_currents(dates_to_process, oscar_mode, save_file, SSH_PATTERN)
+                run_plotting(dates_to_process, oscar_mode)
+        
+    
 
 
-    if do_plots:
-        run_plotting(dates_to_plot)
+    # if PLOT_CURRENTS:
+    #     print("STARTING PLOTTING CURRENTS...")
+    #     run_plotting(dates_to_process)
 
-    if do_validation:
-        run_validation(dates_to_validate)
+    if DO_VALIDATION:
+        print("STARTING VALIDATION...")
+        run_validation(dates_to_process)
       
 
 

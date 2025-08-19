@@ -1,115 +1,113 @@
-import yaml
+import os, yaml
 
-
-with open("/Users/stewarta/Desktop/oscarpy/pyoscar/config/io_config.yaml", "r") as f:
+here = os.path.dirname(__file__)   # /Users/stewarta/Desktop/oscarpy/pyoscar/config
+config_path = os.path.join(here, "io_config.yaml")
+with open(config_path, "r") as f:
     config = yaml.safe_load(f)
 
-do_currents = config['general']['do_currents']
-do_plots = config['general']['do_plots'] #change to do_check_plots
-do_validation = config['general']['do_validation']
-do_validation_plots = config['general']['do_validation_plots']
-do_download = config['general']['do_download']
-do_pdf = config['general']['do_pdf']
+DO_CURRENTS = config['general']['do_currents']
+PLOT_CURRENTS = config['general']['plot_currents'] #change to do_check_plots
+DO_VALIDATION = config['general']['do_validation']
+DO_DOWNLOAD = config['general']['do_download']
 
-start_date = config["general"]["start_date"]
-end_date = config["general"]["end_date"]
-oscar_mode = config['general']['oscar_mode']
-download_mode = config['general']['download_mode']
-diagnostics = config['diagnostics']
-save_dir_fig = diagnostics['nrt']['interp_grad_fig'] 
+
+START_DATE = config["general"]["start_date"]
+END_DATE = config["general"]["end_date"]
+
+DATADIR = os.path.abspath(os.path.join(here, "../../datasets"))
+OVERRIDE_DOWNLOAD = config['general']['override_download']
 filename_interp = "interpolated_{var}_{day}"
 filename_gradient = "grad_{var}_{day}"
-override = config['general']['override']
+override = config['general']['override_current']
 
 
-ssh_mode = config['general']['ssh_mode']
-ssh = config['ssh'][ssh_mode]['input']
-ssh_var = ssh['var']
-ssh_pattern = ssh['file_pattern']
-ssh_src_cmems_interim = config['ssh']['cmems']['input']['src_dir_cmems_interim']
-ssh_src_cmems_final = config['ssh']['cmems']['input']['src_dir_cmems_final']
-ssh_src_neurost_interim = config['ssh']['neurost']['input']['src_dir_neurost_interim']
-ssh_src_neurost_final = config['ssh']['neurost']['input']['src_dir_neurost_final']
-download_dates_cmems = config['ssh']['cmems']['download']['download_dates_cmems']
-download_dates_neurost = config['ssh']['neurost']['download']['download_dates_neurost']
-download_cmems = config['ssh']['cmems']['download']['download_cmems']
-download_neurost = config['ssh']['neurost']['download']['download_neurost']
-skip_existing_cmems_download = config['ssh']['cmems']['download']['skip_existing']
-skip_existing_neurost_download = config['ssh']['neurost']['download']['skip_existing']
+SSH_MODE = config['general']['ssh_mode']
+if SSH_MODE == 'cmems':
+    SSH_PATTERN = "ssh_*.nc"
+elif SSH_MODE == 'neurost':
+    SSH_PATTERN = "NeurOST_SSH-SST_*.nc"
+else:
+    SSH_PATTERN = None
 
-sst_mode = config['general']['sst_mode']
-sst = config['sst'][sst_mode]['input']
-sst_var = sst['var']
-sst_pattern = sst['file_pattern']
-sst_src = sst['src_dir']
-download_dates_sst = config['sst'][sst_mode]['download']['download_dates_sst']
-download_sst = config['sst'][sst_mode]['download']['download_sst']
-skip_existing_cmc_download = config['sst']['cmc']['download']['skip_existing']
 
-wind_mode = config['general']['wind_mode']
-wind = config['wind'][wind_mode]['input']
-wind_var_u = wind['var_u']
-wind_var_v = wind['var_v']
-wind_pattern = wind['file_pattern']
-wind_src = wind['src_dir']
-download_dates_wind = config['wind'][wind_mode]['download']['download_dates_wind']
-download_wind = config['wind'][wind_mode]['download']['download_wind']
-skip_existing_era5_download = config['wind']['era5']['download']['skip_existing']
+
+ssh_src_cmems_interim = DATADIR + "/SSH/INTERIM/CMEMS/SRC/"
+ssh_src_cmems_final = DATADIR + "/SSH/FINAL/CMEMS/SRC/"
+ssh_src_neurost_interim = DATADIR + "/SSH/INTERIM/NEUROST/SRC/"
+ssh_src_neurost_final = DATADIR + "/SSH/FINAL/NEUROST/SRC"
+
+
+sst_src = DATADIR + "/SST/CMC/SRC/"
+
+
+
+wind_src = DATADIR + "/WIND/ERA5/SRC/"
+WIND_PATTERN = "ERA5_*.nc"
+
+
 
 do_eq = config['general']['do_eq']
 
 
-podaacfile = config['podaac']['output_file_prefix'] + oscar_mode
+podaacfile = "oscar_currents_" 
 
-ssh_long_desc = config['podaac']['description']['ssh']
-wind_long_desc = config['podaac']['description']['wind']
-sst_long_desc = config['podaac']['description']['sst']
-oscar_long_desc = config['podaac']['description']['oscar']
-oscar_summary = config['podaac']['summary']
-oscar_id = config['podaac']['id']
-ssh_long_desc = config['podaac']['description']['ssh']
-doi = config['podaac']['doi']
+ssh_long_desc = "CMEMS SSALTO/DUACS SEALEVEL_GLO_PHY_L4_NRT_OBSERVATIONS_008_046 DOI: 10.48670/moi-00149"
+wind_long_desc = "ECMWF ERA5 10m wind DOI: 10.24381/cds.adbb2d47"
+sst_long_desc =  "CMC 0.1 deg SST V3.0 DOI: 10.5067/GHCMC-4FM03"
+oscar_long_desc = "Ocean Surface Current Analyses Real-time (OSCAR) Surface Currents - Interim 0.25 Degree (Version 2.0)"
+oscar_summary = "Higher quality than NRT currents, but lesser quality than final currents."
+oscar_id = "OSCAR_L4_OC_INTERIM_V2.0"
+doi =  "10.5067/OSCAR-25I20"
 
-if ssh_mode == "cmems":
-    output_dir = config['podaac']['output_dir_cmems']
-    podaacdir = config['podaac']['output_dir_cmems']
+if SSH_MODE == "cmems":
+    output_dir = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
+    podaacdir = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
 else:
-    output_dir = config['podaac']['output_dir_neurost']
-    podaacdir = config['podaac']['output_dir_neurost']
+    output_dir = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
+    podaacdir = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
 
 
-fig_root = config['diagnostics']['currents']['fig_root']
+fig_root = os.path.abspath(os.path.join(here, "../../diagnostics/currents/figures"))
+region = config['plot_currents']['region']
 
 
-# plot_currents = config['plots']['currents']['do_plot']
-# plot_validation = config['plots']['validation']['do_validate']
-region = config['plots']['currents']['region']
-dates_to_plot = config['plots']['currents']['dates_to_plot']
-dates_to_validate = config['plots']['validation']['dates_to_validate']
-
-ssh_mode_plots = config['plots']['ssh_mode']
-if ssh_mode_plots == "cmems":
-    search_path_plots = config['podaac']['output_dir_cmems']
+if SSH_MODE == "cmems":
+    search_path_plots = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
 else:
-    search_path_plots = config['podaac']['output_dir_neurost']
+    search_path_plots =  DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
 
+search_path_cmems = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
+search_path_neurost = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
 
+drifter_src_dir = DATADIR + "/DRIFTERS"
+validation_dir = DATADIR + "/VALIDATION"
 
+currents_cmems_final = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
+currents_neurost_final = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
+currents_cmems_interim = DATADIR + "/CURRENTS/INTERIM/PODAAC/CMEMS"
+currents_neurost_interim = DATADIR + "/CURRENTS/INTERIM/PODAAC/NEUROST"
 
-search_path_cmems = config['podaac']['output_dir_cmems']
-search_path_neurost = config['podaac']['output_dir_neurost']
-
-
-drifter_src_dir = config['drifters']['src_dir']
-download_drifter = config['drifters']['download_drifter']
-drifter_download_date = config['drifters']['download_date']
-dates_to_validate = config['drifters']['dates_to_validate_range']
-validation_mode = config['general']['validation_mode']
-validation_dir = config['validation']['validation_dir']
-
-currents_cmems_final = config['podaac']['currents_cmems_final']
-currents_neurost_final = config['podaac']['currents_neurost_final']
-currents_cmems_interim = config['podaac']['currents_cmems_interim']
-currents_neurost_interim = config['podaac']['currents_neurost_interim']
-
-explanations = config['explanations']
+explanations = [
+    "explanation1",
+    "explanation2",
+    "explanation3",
+    "explanation4",
+    "explanation5",
+    "explanation6",
+    "explanation7",
+    "explanation8",
+    "explanation9",
+    "explanation10",
+    "explanation11",
+    "explanation12",
+    "explanation13",
+    "explanation14",
+    "explanation15",
+    "explanation16",
+    "explanation17",
+    "explanation18",
+    "explanation19",
+    "explanation20",
+    "explanation21",
+    "explanation22",
+]

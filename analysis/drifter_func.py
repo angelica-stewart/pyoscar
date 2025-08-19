@@ -455,7 +455,6 @@ def get_unique_drifter_daily_avg(ds, output_folder):
         daily_ds['ID'] = xr.DataArray(np.full(daily_ds.dims['time'], drifter_id), dims='time')
        
         outfile = os.path.join(output_folder, f"drifter_{drifter_id}_daily_avg.nc")
-        print(f'Daily averages for driffer: {drifter_id} is computed and saved at {outfile}')
         daily_ds.to_netcdf(outfile)
 
         

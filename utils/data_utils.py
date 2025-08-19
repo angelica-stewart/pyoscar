@@ -8,6 +8,127 @@ import yaml
 from ..config.setup import *
 from datetime import datetime, timedelta
 import calendar
+from ..utils.download import *
+import os, glob
+import sys
+def determine_validation_mode(dates):
+    d8s = [d.replace("-", "")[:8] for d in dates]
+
+    def files_for_date(root, d8):
+        pat = os.path.join(root, "**", f"*{d8}*.nc")
+        return [p for p in glob.glob(pat, recursive=True) if os.path.getsize(p) > 0]
+
+    missing_final = []
+    for d8 in d8s:
+        cmems = files_for_date(currents_cmems_final, d8)
+        neuro = files_for_date(currents_neurost_final, d8)
+        if not (cmems and neuro):
+            missing_final.append(f"{d8} (final: cmems={bool(cmems)}, neurost={bool(neuro)})")
+
+    if not missing_final:   # all final files exist
+        return "final"
+    else:
+        print("Missing FINAL files:")
+        for m in missing_final:
+            print("   ", m)
+            print("Checking Interim...")
+        
+
+    # check interim
+    missing_interim = []
+    for d8 in d8s:
+        cmems = files_for_date(currents_cmems_interim, d8)
+        neuro = files_for_date(currents_neurost_interim, d8)
+        if not (cmems and neuro):
+            missing_interim.append(f"{d8} (interim: cmems={bool(cmems)}, neurost={bool(neuro)})")
+
+    if not missing_interim:   # all interim files exist
+        return "interim"
+    
+    print("Currents are unavailable for some/all of the dates specified.")
+    print("Missing Interim:")
+    for m in missing_interim:
+        print("   ", m)
+    print("Missing Final:")
+    for m in missing_final:
+        print("   ", m)
+
+    sys.exit(1)
+
+def determine_oscar_mode(dates, ssh_mode):
+    # dates are strings; we also need YYYYMMDD for filename matching
+    d8s = [d.replace("-", "")[:8] for d in dates]
+
+    def exists(root, d8):
+        pat = os.path.join(root, "**", f"*{d8}*.nc")
+        for p in glob.glob(pat, recursive=True):
+            try:
+                if os.path.getsize(p) > 0:
+                    return True
+            except OSError:
+                pass
+        return False
+
+    # --- Resolve SSH roots by ssh_mode ---
+    if ssh_mode == "cmems":
+        ssh_final_dir   = ssh_src_cmems_final
+        ssh_interim_dir = ssh_src_cmems_interim
+        ssh_downloader  = download_ssh_cmems
+    elif ssh_mode == "neurost":
+        ssh_final_dir   = ssh_src_neurost_final
+        ssh_interim_dir = ssh_src_neurost_interim
+        ssh_downloader  = download_ssh_neurost
+    else:
+        raise ValueError(f"ssh_mode must be 'cmems' or 'neurost', got: {ssh_mode}")
+
+    # ---------------- SSH: check -> (maybe) download -> re-check ----------------
+    all_final   = all(exists(ssh_final_dir, d8)   for d8 in d8s)
+    all_interim = all(exists(ssh_interim_dir, d8) for d8 in d8s) if not all_final else False
+
+    if all_final:
+        oscar_mode = "final"
+    elif all_interim:
+        oscar_mode = "interim"
+    else:
+        # try one download attempt for SSH (the function can decide tier internally if needed)
+        ssh_downloader(dates)
+        # re-check after download attempt
+        all_final   = all(exists(ssh_final_dir, d8)   for d8 in d8s)
+        all_interim = all(exists(ssh_interim_dir, d8) for d8 in d8s) if not all_final else False
+        oscar_mode = "final" if all_final else ("interim" if all_interim else None)
+
+    # ---------------- SST: check -> (maybe) download -> re-check ----------------
+    all_sst = all(exists(sst_src, d8) for d8 in d8s)
+    if not all_sst:
+        download_sst_cmc(dates)
+        all_sst = all(exists(sst_src, d8) for d8 in d8s)
+
+    # ---------------- WIND: check -> (maybe) download -> re-check --------------
+    all_wind = all(exists(wind_src, d8) for d8 in d8s)
+    if not all_wind:
+        download_wind_era5(dates)
+        all_wind = all(exists(wind_src, d8) for d8 in d8s)
+
+    # ---------------- Missing list & final decision ----------------------------
+    missing_files = []
+
+    if oscar_mode is None:
+        # record exactly which SSH dates are still missing in both tiers
+        for d8 in d8s:
+            if not exists(ssh_final_dir, d8) and not exists(ssh_interim_dir, d8):
+                missing_files.append(f"ssh: {ssh_final_dir}/**/*{d8}*.nc or {ssh_interim_dir}/**/*{d8}*.nc")
+
+    for d8 in d8s:
+        if not exists(sst_src, d8):
+            missing_files.append(f"sst: {sst_src}/**/*{d8}*.nc")
+        if not exists(wind_src, d8):
+            missing_files.append(f"wind: {wind_src}/**/*{d8}*.nc")
+
+    if missing_files:
+        raise FileNotFoundError("Missing required files:\n" + "\n".join(missing_files))
+
+    return oscar_mode
+
 
 def get_date_range(date_list):
     if len(date_list) != 2:
@@ -23,20 +144,12 @@ def get_date_range(date_list):
     return [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(delta + 1)]
 
 
-def to_date_list(dates):
-    if len(dates) == 1:
-        return [dates[0]]
-    if len(dates) == 2:
-        return get_date_range(dates)  # your existing helper
-    raise ValueError("date list must contain 1 or 2 dates (start and end).")
-
-
-def get_file_path(date, ssh_mode_val = None):
+def get_file_path(date, oscar_mode, ssh_mode_val = None):
     dt = datetime.strptime(date, "%Y-%m-%d")
     date_str = dt.strftime("%Y%m%d")
     year = dt.strftime("%Y")
     month = dt.strftime("%m")
-    filename = f"oscar_currents_nrt{date_str}.nc"
+    filename = f"oscar_currents_{oscar_mode}{date_str}.nc"
     if ssh_mode_val is None:
 
         return os.path.join(search_path_plots, year, month, filename)
@@ -48,31 +161,44 @@ def get_file_path(date, ssh_mode_val = None):
         
 def get_title(date):
     if region.lower() == "global":
-        return f"(GLOBAL) ({ssh_mode_plots.upper()}) OSCAR Surface Currents ({date})"
+        return f"(GLOBAL) ({SSH_MODE.upper()}) OSCAR Surface Currents ({date})"
     else:
-        return f"({ssh_mode_plots.upper()}) OSCAR Surface Currents of {region} on {date}"
+        return f"({SSH_MODE.upper()}) OSCAR Surface Currents of {region} on {date}"
 
-def load_ds(date_str, var):
+def load_ds(date_str, oscar_mode, var, ssh_pattern = SSH_PATTERN, ssh_mode_list_val = None):
+    print(ssh_pattern)
 
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     next_day_obj = date_obj + timedelta(days=1)
     year = date_obj.strftime("%Y")
     month = date_obj.strftime("%m")
     day_str = date_obj.strftime("%Y%m%d")
-
     # Determine source path and file pattern
+    #loads a dataset
     if var == "ssh":
         if oscar_mode == "final":
-            if ssh_mode == "cmems":
+            if SSH_MODE == "cmems":
                 ssh_src = ssh_src_cmems_final
-            else:
+            elif SSH_MODE == 'neurost':
                 ssh_src = ssh_src_neurost_final
-        else:
-            if ssh_mode == "cmems":
-                ssh_src = ssh_src_cmems_interim
             else:
+                if ssh_mode_list_val == "cmems":
+                    ssh_src = ssh_src_cmems_final
+                elif ssh_mode_list_val == 'neurost':
+                    ssh_src = ssh_src_neurost_final
+                
+        elif oscar_mode == "interim": 
+            if SSH_MODE == "cmems":
+                ssh_src = ssh_src_cmems_interim
+            elif SSH_MODE == 'neurost':
                 ssh_src = ssh_src_neurost_interim
-
+            else:
+                if ssh_mode_list_val == "cmems":
+                    ssh_src = ssh_src_cmems_interim
+                elif ssh_mode_list_val == 'neurost':
+                    ssh_src = ssh_src_neurost_interim
+        
+        print(ssh_src)
         search_dir = os.path.join(ssh_src, year, month)
         pattern = ssh_pattern.replace("*", f"{day_str}*")
     elif var == "sst":
@@ -81,7 +207,7 @@ def load_ds(date_str, var):
 
     elif var == "wind":
         search_dir = os.path.join(wind_src, year,month)
-        pattern = wind_pattern.replace("*", f"{day_str}")
+        pattern = WIND_PATTERN.replace("*", f"{day_str}")
 
     else:
         raise ValueError(f"Unsupported variable: {var}")
@@ -472,114 +598,14 @@ def parse_dates(dates):
 
 
 
-
-import os, glob
-
-def check_ssh(dates, oscar_mode, ssh_mode, return_missing=False):
-    """
-    Returns:
-      - if return_missing=False: bool
-      - if return_missing=True: (bool, missing_list)
-        where missing_list contains expected file paths or patterns per date
-    """
-    if oscar_mode == "final":
-        ssh_root = ssh_src_cmems_final if ssh_mode == "cmems" else ssh_src_neurost_final
-    else:
-        ssh_root = ssh_src_cmems_interim if ssh_mode == "cmems" else ssh_src_neurost_interim
-
-    missing = []
-
-    for d in dates:
-        y = d[:4]
-        m = d[5:7]
-        d_str = d.replace("-", "")
-        folder = os.path.join(ssh_root, y, m)
-
-        if ssh_mode == "cmems":
-            file_path = os.path.join(folder, f"ssh_{d_str}.nc")
-            if not os.path.exists(file_path):
-                missing.append(file_path)
-        else:  # 'neurost'
-            pattern = os.path.join(folder, f"NeurOST_SSH-SST_{d_str}_*.nc")
-            if len(glob.glob(pattern)) == 0:
-                missing.append(pattern)
-
-    ok = (len(missing) == 0)
-    return (ok, missing) if return_missing else ok
-
-
-def check_sst(dates, return_missing=False):
-    missing = []
-    for d in dates:
-        y = d[:4]
-        m = d[5:7]
-        d_str = d.replace("-", "")
-        folder = os.path.join(sst_src, y, m)
-        pattern = os.path.join(folder, f"{d_str}*.nc")
-        if len(glob.glob(pattern)) == 0:
-            missing.append(pattern)
-    ok = (len(missing) == 0)
-    return (ok, missing) if return_missing else ok
-
-
-def check_wind(dates, return_missing=False):
-    missing = []
-    for d in dates:
-        y = d[:4]
-        m = d[5:7]
-        d_str = d.replace("-", "")
-        folder = os.path.join(wind_src, y, m)
-        file_path = os.path.join(folder, f"era5_{d_str}.nc")
-        if not os.path.exists(file_path):
-            missing.append(file_path)
-    ok = (len(missing) == 0)
-    return (ok, missing) if return_missing else ok
-
-
-def ready_for_oscar_mode(dates, oscar_mode, ssh_mode, report=False):
-    """
-    If report=False: returns bool.
-    If report=True:  returns (bool, {"ssh": [...], "sst": [...], "wind": [...]})
-                     Only includes keys with missing items.
-    """
-    ok_ssh, miss_ssh = check_ssh(dates, oscar_mode, ssh_mode, return_missing=True)
-    ok_sst, miss_sst = check_sst(dates, return_missing=True)
-    ok_wind, miss_wind = check_wind(dates, return_missing=True)
-
-    ok_all = ok_ssh and ok_sst and ok_wind
-    if not report:
-        return ok_all
-
-    missing = {}
-    if miss_ssh:  missing["ssh"]  = miss_ssh
-    if miss_sst:  missing["sst"]  = miss_sst
-    if miss_wind: missing["wind"] = miss_wind
-    return ok_all, missing
-
-
-# Optional: quick pretty-printer
-def print_missing(missing_dict):
-    if not missing_dict:
-        print("✅ All required files are present.")
-        return
-    print("❌ Missing files/patterns:")
-    for k, items in missing_dict.items():
-        print(f"  - {k}:")
-        for p in items:
-            print(f"      {p}")
-
-
-
-
-
-def get_month_info(year_month_str):
-    '''takes a sring link "2020-07 and returns a '2020', '07', '01', '31'
-        in other words, the first day of the month and the last day of the month '''
-    year, month = map(int, year_month_str.split("-"))
-    month_str = f"{month:02d}"               # ensures '01', '09', etc.
-    first_day_str = "01"
-    last_day_str = f"{calendar.monthrange(year, month)[1]:02d}"
-    return str(year), month_str, first_day_str, last_day_str
+# def get_month_info(year_month_str):
+#     '''takes a sring link "2020-07 and returns a '2020', '07', '01', '31'
+#         in other words, the first day of the month and the last day of the month '''
+#     year, month = map(int, year_month_str.split("-"))
+#     month_str = f"{month:02d}"               # ensures '01', '09', etc.
+#     first_day_str = "01"
+#     last_day_str = f"{calendar.monthrange(year, month)[1]:02d}"
+#     return str(year), month_str, first_day_str, last_day_str
 
 def get_drifter_monthly_file(drifter_src_dir, year, month):
     filename = f"drifter_6hour_qc_{year}_{month}.nc"

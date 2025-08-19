@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from ..config.setup import ssh_mode
+from ..config.setup import SSH_MODE
 from typing import Tuple
 import xarray as xr
 
@@ -70,7 +70,7 @@ powers = np.arange(len(f), 0, -1)
 FACTOR = PHIm**(powers - 2)
 f = f * FACTOR / (2 * OMEGA)
 
-spacing = 0.25 if ssh_mode == "cmems" else 0.1
+spacing = 0.25 if SSH_MODE == "cmems" else 0.1
 
 XOSC = np.arange(0, 360, spacing)
 YOSC = np.arange(-89.75, 90.0, spacing)

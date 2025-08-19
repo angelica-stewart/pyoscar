@@ -47,16 +47,16 @@ def append_to_master(year, month):
         ds_master = xr.open_dataset(master_path)
         
         ds_updated_master = xr.concat([ds_master, ds_month], dim="drifter").sortby("time")
-        print(ds_updated_master.dims)
+       
         ds_updated_master_dedup = dedup_full_match(ds_updated_master)
-        print(ds_updated_master_dedup.dims)
+
        
         #REMOVE DUPLICATES HERE 
     else:
         
         print('Your master path does not exist and is assuming that theis is the first time you are running OSCAR')
         ds_updated_master_dedup = ds_month
-        print(ds_updated_master_dedup.dims)
+
 
     # make a tmp path with os.path, then atomic replace
     base, ext = os.path.splitext(master_path)      # (".../validation_master", ".nc")
@@ -85,13 +85,7 @@ def save_plots_to_pdf(
     pad_bottom=0.20,              # extra bottom room for caption
     box=True
 ):
-    """
-    Writes a multi-page PDF where each page is a Matplotlib Figure with a caption:
-    'Figure N: <explanation>' centered at the bottom. Long captions wrap.
-
-    - figs: list of Matplotlib Figure objects
-    - explanations: list of strings (len == len(figs)) or one string used for all
-    """
+   
     if isinstance(explanations, str):
         explanations = [explanations] * len(figs)
     if len(explanations) != len(figs):
