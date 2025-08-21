@@ -31,9 +31,9 @@ else:
 
 
 
-ssh_src_cmems_interim = DATADIR + "/SSH/CMEMS/INTERIM/SRC/"
-ssh_src_cmems_final = DATADIR + "/SSH/CMEMS/FINAL/SRC/"
-ssh_src_neurost_interim = DATADIR + "/SSH/NEUROST/INTERIM/SRC/"
+ssh_src_cmems_interim = DATADIR + "/SSH/CMEMS/INTERIM/SRC"
+ssh_src_cmems_final = DATADIR + "/SSH/CMEMS/FINAL/SRC"
+ssh_src_neurost_interim = DATADIR + "/SSH/NEUROST/INTERIM/SRC"
 ssh_src_neurost_final = DATADIR + "/SSH/NEUROST/FINAL/SRC"
 
 
@@ -60,11 +60,11 @@ oscar_id = "OSCAR_L4_OC_INTERIM_V2.0"
 doi =  "10.5067/OSCAR-25I20"
 
 if SSH_MODE == "cmems":
-    output_dir = DATADIR + "/CURRENTS/FINAL/CMEMS"
-    podaacdir = DATADIR + "/CURRENTS/FINAL/CMEMS"
+    output_dir = DATADIR + "/CURRENTS/CMEMS/FINAL"
+    podaacdir = DATADIR + "/CURRENTS/CMEMS/FINAL"
 else:
-    output_dir = DATADIR + "/CURRENTS/FINAL/NEUROST"
-    podaacdir = DATADIR + "/CURRENTS/FINAL/NEUROST"
+    output_dir = DATADIR + "/CURRENTS/NEUROST/FINAL"
+    podaacdir = DATADIR + "/CURRENTS/NEUROST/FNAL"
 
 
 REGION = config['plot_currents']['region']
@@ -73,20 +73,20 @@ VALIDATION_DIR = os.path.abspath(os.path.join(here, "../../diagnostics/validatio
 
 
 if SSH_MODE == "cmems":
-    search_path_plots = DATADIR + "/CURRENTS/FINAL/CMEMS"
+    search_path_plots = DATADIR + "/CURRENTS/CMEMS/FINAL"
 else:
-    search_path_plots =  DATADIR + "/CURRENTS/FINAL//NEUROST"
+    search_path_plots =  DATADIR + "/CURRENTS/NEUROST/FINAL"
 
-search_path_cmems = DATADIR + "/CURRENTS/FINAL/CMEMS"
-search_path_neurost = DATADIR + "/CURRENTS/FINAL/NEUROST"
+search_path_cmems = DATADIR + "/CURRENTS/CMEMS/FINAL"
+search_path_neurost = DATADIR + "/CURRENTS/NEUROST/FINAL"
 
 DRIFTER_SRC_DIR = DATADIR + "/DRIFTERS"
 
 
-currents_cmems_final = DATADIR + "/CURRENTS/FINAL/CMEMS"
-currents_neurost_final = DATADIR + "/CURRENTS/FINAL/NEUROST"
-currents_cmems_interim = DATADIR + "/CURRENTS/INTERIM/CMEMS"
-currents_neurost_interim = DATADIR + "/CURRENTS/INTERIM/NEUROST"
+currents_cmems_final = DATADIR + "/CURRENTS/CMEMS/FINAL"
+currents_neurost_final = DATADIR + "/CURRENTS/NEUROST/FINAL"
+currents_cmems_interim = DATADIR + "/CURRENTS/CMEMS/INTERIM"
+currents_neurost_interim = DATADIR + "/CURRENTS/NEUROST/INTERIM"
 
 explanations = [
     "explanation1",
