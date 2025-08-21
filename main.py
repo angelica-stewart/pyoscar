@@ -409,22 +409,22 @@ def main():
 
     
     if len(dates_to_process) != 0:
-        # print("STARTING CURRENTS")  
-        # np.seterr(divide='ignore', invalid='ignore', over='ignore')
-        # start_dt = np.datetime64(START_DATE)
-        # end_dt = np.datetime64(END_DATE)
-        # dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
-        # oscar_mode = determine_oscar_mode(dates_to_process, SSH_MODE)
-        # save_file = f"oscar_currents_{oscar_mode}"
-        # run_compute_currents(dates_to_process, oscar_mode, save_file)
+        print("STARTING CURRENTS")  
+        np.seterr(divide='ignore', invalid='ignore', over='ignore')
+        start_dt = np.datetime64(START_DATE)
+        end_dt = np.datetime64(END_DATE)
+        dates_to_process = get_dates_to_process(start_dt, end_dt, output_dir, override)
+        oscar_mode = determine_oscar_mode(dates_to_process, SSH_MODE)
+        save_file = f"oscar_currents_{oscar_mode}"
+        run_compute_currents(dates_to_process, oscar_mode, save_file)
    
 
     
 
 
-        # if PLOT_CURRENTS:
-        #     print("STARTING PLOTTING CURRENTS...")
-        #     run_plotting(dates_to_process, oscar_mode)
+        if PLOT_CURRENTS:
+            print("STARTING PLOTTING CURRENTS...")
+            run_plotting(dates_to_process, oscar_mode)
 
         if DO_VALIDATION:
             print("STARTING VALIDATION...")
