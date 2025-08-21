@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.matlib
 from .computation.interp_and_grad import *
 from .computation.compute_currents import *
 from .utils.data_utils import *
