@@ -87,7 +87,7 @@ def extract_data(ds):
 
 def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode, vmin=0, vmax=1.6):
     year, month = extract_date(ds_path)
-    save_dir = os.path.join(FIG_ROOT, ssh_mode, REGION, year, month)
+    save_dir = os.path.join(FIG_ROOT, ssh_mode, REGION)
     os.makedirs(save_dir, exist_ok=True)
 
     # File path

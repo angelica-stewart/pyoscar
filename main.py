@@ -447,9 +447,9 @@ def main():
                 print("STARTING PLOTTING CURRENTS...")
                 run_plotting(dates_to_process, oscar_mode)
 
-        if DO_VALIDATION:
-            print("STARTING VALIDATION...")
-            run_validation(dates_to_process)
+    if DO_VALIDATION:
+        print("STARTING VALIDATION...")
+        run_validation(dates_to_process)
       
 
 
