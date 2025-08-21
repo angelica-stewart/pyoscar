@@ -5,10 +5,10 @@ general:
   override_download: true
 
 
-  start_date: "2010-01-01"
-  end_date: "2010-01-02"
+  start_date: "1993-01-01"
+  end_date: "1993-01-03"
   override_current: true
-  ssh_mode: 'neurost' #options: cmems, neurost
+  ssh_mode: 'cmems' #options: cmems, neurost
   do_eq: true
 
 

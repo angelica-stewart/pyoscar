@@ -246,6 +246,16 @@ def run_validation(dates):
                         print(drifter_vs_cmems_month.time.max())
                         os.makedirs(os.path.dirname(validation_path_cmems), exist_ok=True)
                         drifter_vs_cmems_month.to_netcdf(validation_path_cmems, mode = 'w')
+                if os.path.exists(validation_path_cmems):
+                    validation_ds_cmems = xr.open_dataset(validation_path_cmems)
+                    drifter_vs_cmems_list.insert(0, validation_ds_cmems)
+                    drifter_vs_cmems_month = xr.concat(drifter_vs_cmems_list, dim='drifter')
+                    print(drifter_vs_cmems_month.time.min())
+                    print(drifter_vs_cmems_month.time.max())
+                    validation_ds_cmems.close()
+                    os.makedirs(os.path.dirname(validation_path_cmems), exist_ok=True)
+                    drifter_vs_cmems_month.to_netcdf(validation_path_cmems, mode="w")
+
 
 
                 #append_to_master(year, month, 'cmems', validation_mode_cmems)
@@ -292,12 +302,12 @@ def run_validation(dates):
                         os.makedirs(os.path.dirname(validation_path_neurost), exist_ok=True)
                         drifter_vs_neurost_month.to_netcdf(validation_path_neurost, mode = 'w')
                 if os.path.exists(validation_path_neurost):
-                    validation_ds = xr.open_dataset(validation_path_neurost)
-                    drifter_vs_cmems_list.insert(0, validation_ds)
+                    validation_ds_neurost = xr.open_dataset(validation_path_neurost)
+                    drifter_vs_neurost_list.insert(0, validation_ds_neurost)
                     drifter_vs_neurost_month = xr.concat(drifter_vs_neurost_list, dim='drifter')
                     print(drifter_vs_neurost_month.time.min())
                     print(drifter_vs_neurost_month.time.max())
-                    validation_ds.close()
+                    validation_ds_neurost.close()
                     os.makedirs(os.path.dirname(validation_path_neurost), exist_ok=True)
                     drifter_vs_neurost_month.to_netcdf(validation_path_neurost, mode = 'w')
 
