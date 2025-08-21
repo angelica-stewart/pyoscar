@@ -15,6 +15,7 @@ END_DATE = config["general"]["end_date"]
 
 DATADIR = os.path.abspath(os.path.join(here, "../../datasets"))
 OVERRIDE_DOWNLOAD = config['general']['override_download']
+OVERRIDE_CURRENT = config['general']['override_current']
 filename_interp = "interpolated_{var}_{day}"
 filename_gradient = "grad_{var}_{day}"
 override = config['general']['override_current']
@@ -30,10 +31,10 @@ else:
 
 
 
-ssh_src_cmems_interim = DATADIR + "/SSH/INTERIM/CMEMS/SRC/"
-ssh_src_cmems_final = DATADIR + "/SSH/FINAL/CMEMS/SRC/"
-ssh_src_neurost_interim = DATADIR + "/SSH/INTERIM/NEUROST/SRC/"
-ssh_src_neurost_final = DATADIR + "/SSH/FINAL/NEUROST/SRC"
+ssh_src_cmems_interim = DATADIR + "/SSH/CMEMS/INTERIM/SRC/"
+ssh_src_cmems_final = DATADIR + "/SSH/CMEMS/FINAL/SRC/"
+ssh_src_neurost_interim = DATADIR + "/SSH/NEUROST/INTERIM/SRC/"
+ssh_src_neurost_final = DATADIR + "/SSH/NEUROST/FINAL/SRC"
 
 
 sst_src = DATADIR + "/SST/CMC/SRC/"
