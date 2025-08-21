@@ -40,14 +40,14 @@ def append_to_master(year, month, start, end, ssh_type, validation_mode):
 
 
     ds_month = xr.open_dataset(monthly_path)
-
+    print(ds_month.time.max())
 
 
     if os.path.exists(master_path):
         ds_master = xr.open_dataset(master_path)
         
         ds_updated_master = xr.concat([ds_master, ds_month], dim="drifter").sortby("time")
-       
+        print(ds_updated_master.time.max())
         ds_updated_master_dedup = dedup_full_match(ds_updated_master, ssh_type)
 
        

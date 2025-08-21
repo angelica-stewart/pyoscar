@@ -1,14 +1,14 @@
 # === General Settings ===
 general:
-  plot_currents: false
+  plot_currents: true
   do_validation: true
   override_download: true
 
 
-  start_date: "2012-01-03"
-  end_date: "2012-01-03"
+  start_date: "2010-01-01"
+  end_date: "2010-01-02"
   override_current: true
-  ssh_mode: 'cmems' #options: cmems, neurost
+  ssh_mode: 'neurost' #options: cmems, neurost
   do_eq: true
 
 

@@ -72,7 +72,7 @@ def determine_validation_mode(dates, ssh_mode):
     for m in missing_final:
         print("   ", m)
 
-    sys.exit(1)
+    
 
 
 def determine_oscar_mode(dates, ssh_mode):
@@ -608,13 +608,15 @@ def get_drifter_monthly_file(drifter_src_dir, year, month):
     filename = f"drifter_6hour_qc_{year}_{month}.nc"
     file_path = os.path.join(drifter_src_dir, year, month, filename)
     return file_path
-def is_master_consecutive(pattern: str, candidate_yyyy_mm_dd: str) -> bool:
+def is_master_consecutive(pattern, dates): 
     # Expand the glob
+
     files = glob.glob(pattern)
-    print(files)
+    
+
     
     if len(files) == 0:
-        return False
+        return True
 
     # Extract the last 8 digits before ".pdf" from each filename
     end_dates = []
@@ -622,14 +624,21 @@ def is_master_consecutive(pattern: str, candidate_yyyy_mm_dd: str) -> bool:
         m = re.search(r"(\d{8})(?=\.pdf$)", os.path.basename(p))
         if m:
             end_dates.append(datetime.strptime(m.group(1), "%Y%m%d").date())
-    print(end_dates)
+
     if not end_dates:
         return False
 
     last_end = max(end_dates)  # use the latest one
-    print(last_end)
+
+
     expected_next = last_end + timedelta(days=1)
-    print(expected_next)
-    candidate = datetime.strptime(candidate_yyyy_mm_dd, "%Y-%m-%d").date()
-    print(candidate)
+
+
+    
+    for d in dates:
+  
+        candidate = datetime.strptime(d, "%Y-%m-%d").date()
+
+        if candidate == expected_next:
+            break
     return candidate == expected_next
