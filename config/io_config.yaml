@@ -1,22 +1,21 @@
 # === General Settings ===
 general:
-  do_download: true
-  do_currents: true
-  plot_currents: true
+  plot_currents: false
   do_validation: true
- 
   override_download: true
 
 
-  start_date: "2012-01-01"
-  end_date: "2012-01-01"
+  start_date: "2012-01-03"
+  end_date: "2012-01-03"
   override_current: true
-  ssh_mode: 'cmems' #options: cmems, neurost,..error when "both".. fix that
+  ssh_mode: 'cmems' #options: cmems, neurost
   do_eq: true
 
 
 plot_currents:
-  region: "global" #options: gulfstream, indian ocean, caribbean, global, austrailia_nz
+  region: "global" #options: gulf_stream, indian_ocean, caribbean, global, austrailia_nz
   
-#note_to_self.. 
-#neurost has data from 2010, currently cannont validate without neurost, wll fix that 
+#to do 
+#update readme
+#add currents_to_pdf ... ??
+#ssh_file_gradient_not in folder 

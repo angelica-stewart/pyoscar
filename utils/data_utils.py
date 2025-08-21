@@ -6,24 +6,43 @@ import datetime as dt
 import re
 import yaml
 from ..config.setup import *
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import calendar
 from ..utils.download import *
 import os, glob
 import sys
-def determine_validation_mode(dates):
-    d8s = [d.replace("-", "")[:8] for d in dates]
+from pathlib import Path
 
-    def files_for_date(root, d8):
-        pat = os.path.join(root, "**", f"*{d8}*.nc")
+def determine_validation_mode(dates, ssh_mode):
+    
+    d8s = [d.replace('-', '')[:8] for d in dates]
+
+    def files_for_date(root, year, month):
+        pat = os.path.join(root, year, month, f"*{d8}*.nc")
         return [p for p in glob.glob(pat, recursive=True) if os.path.getsize(p) > 0]
 
+    # map ssh_mode -> the right directory variables
+    roots_final = {
+        "cmems": currents_cmems_final,
+        "neurost": currents_neurost_final,
+    }
+    roots_interim = {
+        "cmems": currents_cmems_interim,
+        "neurost": currents_neurost_interim,
+    }
+
+    # ---- FINAL CHECK ----
     missing_final = []
     for d8 in d8s:
-        cmems = files_for_date(currents_cmems_final, d8)
-        neuro = files_for_date(currents_neurost_final, d8)
-        if not (cmems and neuro):
-            missing_final.append(f"{d8} (final: cmems={bool(cmems)}, neurost={bool(neuro)})")
+        year, month, day = d8[:4], d8[4:6], d8[6:8]   
+
+
+        root = roots_final[ssh_mode]   # pick correct one
+
+        files = files_for_date(root, year, month)
+
+        if not files:
+            missing_final.append(f"{d8} (final: {ssh_mode}={bool(files)})")
 
     if not missing_final:   # all final files exist
         return "final"
@@ -31,20 +50,20 @@ def determine_validation_mode(dates):
         print("Missing FINAL files:")
         for m in missing_final:
             print("   ", m)
-            print("Checking Interim...")
-        
+        print("Checking Interim...")
 
-    # check interim
+    # ---- INTERIM CHECK ----
     missing_interim = []
     for d8 in d8s:
-        cmems = files_for_date(currents_cmems_interim, d8)
-        neuro = files_for_date(currents_neurost_interim, d8)
-        if not (cmems and neuro):
-            missing_interim.append(f"{d8} (interim: cmems={bool(cmems)}, neurost={bool(neuro)})")
+        year, month, day = d8[:4], d8[4:6], d8[6:8]
+        root = roots_interim[ssh_mode]
+        files = files_for_date(root, year, month)
+        if not files:
+            missing_interim.append(f"{d8} (interim: {ssh_mode}={bool(files)})")
 
-    if not missing_interim:   # all interim files exist
+    if not missing_interim:
         return "interim"
-    
+
     print("Currents are unavailable for some/all of the dates specified.")
     print("Missing Interim:")
     for m in missing_interim:
@@ -54,6 +73,7 @@ def determine_validation_mode(dates):
         print("   ", m)
 
     sys.exit(1)
+
 
 def determine_oscar_mode(dates, ssh_mode):
     # dates are strings; we also need YYYYMMDD for filename matching
@@ -160,13 +180,12 @@ def get_file_path(date, oscar_mode, ssh_mode_val = None):
             return os.path.join(search_path_neurost, year, month, filename)
         
 def get_title(date):
-    if region.lower() == "global":
+    if REGION.lower() == "global":
         return f"(GLOBAL) ({SSH_MODE.upper()}) OSCAR Surface Currents ({date})"
     else:
-        return f"({SSH_MODE.upper()}) OSCAR Surface Currents of {region} on {date}"
+        return f"({SSH_MODE.upper()}) OSCAR Surface Currents of {REGION} on {date}"
 
-def load_ds(date_str, oscar_mode, var, ssh_pattern = SSH_PATTERN, ssh_mode_list_val = None):
-    print(ssh_pattern)
+def load_ds(date_str, oscar_mode, var):
 
     date_obj = datetime.strptime(date_str, "%Y-%m-%d")
     next_day_obj = date_obj + timedelta(days=1)
@@ -181,26 +200,16 @@ def load_ds(date_str, oscar_mode, var, ssh_pattern = SSH_PATTERN, ssh_mode_list_
                 ssh_src = ssh_src_cmems_final
             elif SSH_MODE == 'neurost':
                 ssh_src = ssh_src_neurost_final
-            else:
-                if ssh_mode_list_val == "cmems":
-                    ssh_src = ssh_src_cmems_final
-                elif ssh_mode_list_val == 'neurost':
-                    ssh_src = ssh_src_neurost_final
                 
         elif oscar_mode == "interim": 
             if SSH_MODE == "cmems":
                 ssh_src = ssh_src_cmems_interim
             elif SSH_MODE == 'neurost':
                 ssh_src = ssh_src_neurost_interim
-            else:
-                if ssh_mode_list_val == "cmems":
-                    ssh_src = ssh_src_cmems_interim
-                elif ssh_mode_list_val == 'neurost':
-                    ssh_src = ssh_src_neurost_interim
-        
-        print(ssh_src)
+
+    
         search_dir = os.path.join(ssh_src, year, month)
-        pattern = ssh_pattern.replace("*", f"{day_str}*")
+        pattern = SSH_PATTERN.replace("*", f"{day_str}*")
     elif var == "sst":
         search_dir = os.path.join(sst_src, year, month)
         pattern = f"{day_str}*CMC-L4_GHRSST-SSTfnd*.nc"
@@ -595,19 +604,32 @@ def parse_dates(dates):
     else:
         raise ValueError("`dates` must contain 1 or 2 elements.")
 
-
-
-
-# def get_month_info(year_month_str):
-#     '''takes a sring link "2020-07 and returns a '2020', '07', '01', '31'
-#         in other words, the first day of the month and the last day of the month '''
-#     year, month = map(int, year_month_str.split("-"))
-#     month_str = f"{month:02d}"               # ensures '01', '09', etc.
-#     first_day_str = "01"
-#     last_day_str = f"{calendar.monthrange(year, month)[1]:02d}"
-#     return str(year), month_str, first_day_str, last_day_str
-
 def get_drifter_monthly_file(drifter_src_dir, year, month):
     filename = f"drifter_6hour_qc_{year}_{month}.nc"
     file_path = os.path.join(drifter_src_dir, year, month, filename)
     return file_path
+def is_master_consecutive(pattern: str, candidate_yyyy_mm_dd: str) -> bool:
+    # Expand the glob
+    files = glob.glob(pattern)
+    print(files)
+    
+    if len(files) == 0:
+        return False
+
+    # Extract the last 8 digits before ".pdf" from each filename
+    end_dates = []
+    for p in files:
+        m = re.search(r"(\d{8})(?=\.pdf$)", os.path.basename(p))
+        if m:
+            end_dates.append(datetime.strptime(m.group(1), "%Y%m%d").date())
+    print(end_dates)
+    if not end_dates:
+        return False
+
+    last_end = max(end_dates)  # use the latest one
+    print(last_end)
+    expected_next = last_end + timedelta(days=1)
+    print(expected_next)
+    candidate = datetime.strptime(candidate_yyyy_mm_dd, "%Y-%m-%d").date()
+    print(candidate)
+    return candidate == expected_next

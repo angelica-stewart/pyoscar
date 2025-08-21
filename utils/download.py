@@ -293,7 +293,7 @@ def get_drifter_data(year_month):
     end_str = f"{year}-{month}-{end_day}T23:59:59Z"
 
     # Save location
-    target_dir = os.path.join(drifter_src_dir, year, month)
+    target_dir = os.path.join(DRIFTER_SRC_DIR, year, month)
     os.makedirs(target_dir, exist_ok=True)
 
     filename = f"drifter_6hour_qc_{year}_{month}.nc"

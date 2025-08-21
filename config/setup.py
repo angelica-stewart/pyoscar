@@ -5,10 +5,9 @@ config_path = os.path.join(here, "io_config.yaml")
 with open(config_path, "r") as f:
     config = yaml.safe_load(f)
 
-DO_CURRENTS = config['general']['do_currents']
+
 PLOT_CURRENTS = config['general']['plot_currents'] #change to do_check_plots
 DO_VALIDATION = config['general']['do_validation']
-DO_DOWNLOAD = config['general']['do_download']
 
 
 START_DATE = config["general"]["start_date"]
@@ -60,32 +59,33 @@ oscar_id = "OSCAR_L4_OC_INTERIM_V2.0"
 doi =  "10.5067/OSCAR-25I20"
 
 if SSH_MODE == "cmems":
-    output_dir = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
-    podaacdir = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
+    output_dir = DATADIR + "/CURRENTS/FINAL/CMEMS"
+    podaacdir = DATADIR + "/CURRENTS/FINAL/CMEMS"
 else:
-    output_dir = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
-    podaacdir = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
+    output_dir = DATADIR + "/CURRENTS/FINAL/NEUROST"
+    podaacdir = DATADIR + "/CURRENTS/FINAL/NEUROST"
 
 
-fig_root = os.path.abspath(os.path.join(here, "../../diagnostics/currents/figures"))
-region = config['plot_currents']['region']
+REGION = config['plot_currents']['region']
+FIG_ROOT = os.path.abspath(os.path.join(here, "../../diagnostics/figures"))
+VALIDATION_DIR = os.path.abspath(os.path.join(here, "../../diagnostics/validation"))
 
 
 if SSH_MODE == "cmems":
-    search_path_plots = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
+    search_path_plots = DATADIR + "/CURRENTS/FINAL/CMEMS"
 else:
-    search_path_plots =  DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
+    search_path_plots =  DATADIR + "/CURRENTS/FINAL//NEUROST"
 
-search_path_cmems = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
-search_path_neurost = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
+search_path_cmems = DATADIR + "/CURRENTS/FINAL/CMEMS"
+search_path_neurost = DATADIR + "/CURRENTS/FINAL/NEUROST"
 
-drifter_src_dir = DATADIR + "/DRIFTERS"
-validation_dir = DATADIR + "/VALIDATION"
+DRIFTER_SRC_DIR = DATADIR + "/DRIFTERS"
 
-currents_cmems_final = DATADIR + "/CURRENTS/FINAL/PODAAC/CMEMS"
-currents_neurost_final = DATADIR + "/CURRENTS/FINAL/PODAAC/NEUROST"
-currents_cmems_interim = DATADIR + "/CURRENTS/INTERIM/PODAAC/CMEMS"
-currents_neurost_interim = DATADIR + "/CURRENTS/INTERIM/PODAAC/NEUROST"
+
+currents_cmems_final = DATADIR + "/CURRENTS/FINAL/CMEMS"
+currents_neurost_final = DATADIR + "/CURRENTS/FINAL/NEUROST"
+currents_cmems_interim = DATADIR + "/CURRENTS/INTERIM/CMEMS"
+currents_neurost_interim = DATADIR + "/CURRENTS/INTERIM/NEUROST"
 
 explanations = [
     "explanation1",
@@ -98,16 +98,5 @@ explanations = [
     "explanation8",
     "explanation9",
     "explanation10",
-    "explanation11",
-    "explanation12",
-    "explanation13",
-    "explanation14",
-    "explanation15",
-    "explanation16",
-    "explanation17",
-    "explanation18",
-    "explanation19",
-    "explanation20",
-    "explanation21",
-    "explanation22",
+    "explanation11"
 ]

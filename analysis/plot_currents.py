@@ -2,12 +2,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np 
 from ..utils.data_utils import extract_date, write_netcdf_file
-from ..config.setup import region, fig_root
+from ..config.setup import REGION, FIG_ROOT
 
 
 
-def animate_currents(ds, region, start_date, end_date):
-    return
 def plot_interp_and_grad(data_array, title, filename, save_dir, var, var_mode):
 
     if 'time' in data_array.dims:
@@ -24,7 +22,7 @@ def plot_interp_and_grad(data_array, title, filename, save_dir, var, var_mode):
             os.makedirs(folder_path, exist_ok=True)
 
             plt.figure(figsize=(10, 6))
-            data_array.isel(time=i).plot()
+            data_array.isel(time=i).scatter()
             plt.title(plot_title)
                     
             save_path = os.path.join(folder_path, plot_filename)
@@ -46,6 +44,7 @@ def plot_interp_and_grad(data_array, title, filename, save_dir, var, var_mode):
 
         print(f"Saved figure {var} to path: {save_path}")
         write_netcdf_file(data_array, save_path, title)
+
 def extract_data(ds):
     u = ds['u'].isel(time=0).where(ds['u'] != -999.)
     v = ds['v'].isel(time=0).where(ds['v'] != -999.)
@@ -54,21 +53,21 @@ def extract_data(ds):
     
     lon_adj = lon.where(lon <= 180, lon - 360)  
     #lon_adj = ((lon + 180) % 360) - 180
-    if region == 'global':
+    if REGION == 'global':
         lon_adj = lon_adj.sortby(lon_adj)
     
     region_bounds = {
         'global':      {'lon_min': -180, 'lon_max': 180,  'lat_min': -90,  'lat_max': 90},
-        'gulfstream': {'lon_min': -85,  'lon_max': -60,  'lat_min': 25,   'lat_max': 45},
+        'gulf_stream': {'lon_min': -85,  'lon_max': -60,  'lat_min': 25,   'lat_max': 45},
         'caribbean':  {'lon_min': -90,  'lon_max': -55,  'lat_min': 9,    'lat_max': 23},
-        'indian':     {'lon_min': 20,   'lon_max': 120,  'lat_min': -50,  'lat_max': 30},
+        'indian_ocean':     {'lon_min': 20,   'lon_max': 120,  'lat_min': -50,  'lat_max': 30},
         'australia_nz': {'lon_min': 110,'lon_max': 180,'lat_min': -50,'lat_max': -10}
     }
 
-    if region not in region_bounds:
-        raise ValueError(f"Unknown region '{region}'. Choose from: {list(region_bounds.keys())}")
+    if REGION not in region_bounds:
+        raise ValueError(f"Unknown region '{REGION}'. Choose from: {list(region_bounds.keys())}")
 
-    bounds = region_bounds[region]
+    bounds = region_bounds[REGION]
 
     lon_mask = (lon_adj >= bounds['lon_min']) & (lon_adj <= bounds['lon_max'])
     lat_mask = (lat >= bounds['lat_min']) & (lat <= bounds['lat_max'])
@@ -88,7 +87,7 @@ def extract_data(ds):
 
 def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode, vmin=0, vmax=1.6):
     year, month = extract_date(ds_path)
-    save_dir = os.path.join(fig_root, year, month, region,ssh_mode)
+    save_dir = os.path.join(FIG_ROOT, ssh_mode, REGION, year, month)
     os.makedirs(save_dir, exist_ok=True)
 
     # File path
@@ -99,7 +98,7 @@ def plot_currents(ds_path, lon2d, lat2d, u, v, speed, title, ssh_mode, vmin=0, v
     
     plt.figure(figsize=(12, 8))
 
-    if region == 'global':
+    if REGION == 'global':
         skip = 30
     else:
         skip =3

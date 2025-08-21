@@ -13,100 +13,6 @@ from scipy.interpolate import RegularGridInterpolator
 import pandas as pd
 from matplotlib.colors import LogNorm
 from scipy.stats import linregress
-
-
-def plot_drifter_map(ds, region='global'):
-    """
-    Plot drifter positions on a world map, with zoom options for specific regions.
-
-    """
-  
-
-    # Flatten and clean lat/lon
-    lat = ds['latitude'].values.flatten()
-    lon = ds['longitude'].values.flatten()
-
-    # Normalize longitudes to [-180, 180]
-    lon = (lon + 360) % 360
-    lon[lon > 180] -= 360
-
-    # Setup plot
-    fig = plt.figure(figsize=(12, 6))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-
-    # Add map features
-    ax.coastlines()
-    ax.add_feature(cfeature.BORDERS, linestyle=':')
-    ax.add_feature(cfeature.LAND, facecolor='lightgray')
-
-    # Define zoom regions
-    regions = {
-        'global': [-180, 180, -90, 90],
-        'gulf_stream': [-85, -30, 10, 50],
-        'caribbean': [-90, -55, 5, 30],
-        'indian_ocean': [20, 120, -40, 30]
-    }
-
-    # Set extent
-    extent = regions.get(region.lower(), regions['global'])
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
-
-    # Plot points
-    ax.scatter(lon, lat, s=0.5, color='blue', transform=ccrs.PlateCarree())
-
-    plt.title(f"Drifter Positions - {region.replace('_', ' ').title()}")
-    plt.tight_layout()
-    #plt.show()
-
-    os.makedirs(os.path.dirname("/Users/stewarta/Desktop/oscarpy/diagnostics/drifters/drifter_loc_map.png"), exist_ok=True)
-    plt.savefig("/Users/stewarta/Desktop/oscarpy/diagnostics/drifters/drifter_loc_map.png", dpi=300)
-    plt.close()
-    
-    return
-
-
-def plot_drifter_currents(ds, region='global'):
-    """
-    Plot drifter positions as points colored by speed (no arrows).
-    """
-    lat = ds['latitude'].values
-    lon = ds['longitude'].values
-    u = ds['ve'].values
-    v = ds['vn'].values
-
-    # Normalize longitude to [-180, 180]
-    lon = (lon + 360) % 360
-    lon[lon > 180] -= 360
-
-    # Compute speed magnitude
-    speed = np.sqrt(u**2 + v**2)
-
-    # Define regions
-    regions = {
-        'global': [-180, 180, -90, 90],
-        'gulf_stream': [-85, -30, 10, 50],
-        'caribbean': [-90, -55, 5, 30],
-        'indian_ocean': [20, 120, -40, 30]
-    }
-    extent = regions.get(region.lower(), regions['global'])
-
-    # Plot
-    fig = plt.figure(figsize=(12, 6))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
-    ax.coastlines()
-    ax.add_feature(ccrs.cartopy.feature.BORDERS, linestyle=':')
-    ax.add_feature(ccrs.cartopy.feature.LAND, facecolor='lightgray')
-
-    sc = ax.scatter(lon, lat, c=speed, cmap='turbo', s=10, transform=ccrs.PlateCarree())
-    plt.colorbar(sc, ax=ax, label='Current Speed (m/s)')
-    plt.title(f"Drifter Positions and Magnitude - {region.replace('_', ' ').title()}")
-    plt.tight_layout()
-    #plt.show()
-
-    os.makedirs(os.path.dirname("/Users/stewarta/Desktop/oscarpy/diagnostics/drifters/currents.png"), exist_ok=True)
-    plt.savefig("/Users/stewarta/Desktop/oscarpy/diagnostics/drifters/currents.png", dpi=300)
-    plt.close()
    
 
 
@@ -200,58 +106,6 @@ def bin_drifter_data(ds_drifter, res):
     return output_ds
 
 
-def plot_drifter_component(binned_ds, component='ve',region='global', cmap='turbo'):
-    """
-    Plot a heatmap of the selected vector component from gridded drifter data with coastlines.
-    
-    Parameters:
-        binned_ds (xarray.Dataset): Gridded dataset with 've' or 'vn'
-        component (str): Component to plot ('ve' or 'vn')
-        cmap (str): Colormap to use (default: 'turbo')
-        region (str): Geographic region to plot (e.g. 'global', 'gulf_stream', 'caribbean')
-    """
-
-    if component not in binned_ds:
-        raise ValueError(f"Component '{component}' not found in dataset.")
-
-    lon = binned_ds['longitude']
-    lat = binned_ds['latitude']
-    data = binned_ds[component]
-
-    # Predefined zoom regions
-    regions = {
-        'global': [-180, 180, -90, 90],
-        'gulf_stream': [-85, -30, 10, 50],
-        'caribbean': [-90, -55, 5, 30],
-        'indian_ocean': [20, 120, -40, 30],
-        'north_atlantic': [-80, 10, 0, 60],
-        'custom': None  # use for future flexibility
-    }
-
-    fig = plt.figure(figsize=(14, 6))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-
-    # Add map features
-    ax.coastlines()
-    ax.add_feature(cfeature.LAND, facecolor='lightgray')
-    ax.add_feature(cfeature.BORDERS, linestyle=':')
-
-    if region in regions and regions[region]:
-        ax.set_extent(regions[region], crs=ccrs.PlateCarree())
-
-    mesh = ax.pcolormesh(
-        lon,
-        lat,
-        data,
-        cmap=cmap,
-        shading='auto',
-        transform=ccrs.PlateCarree()
-    )
-
-    plt.colorbar(mesh, ax=ax, orientation='vertical', label=f"{component.upper()} (m/s)")
-    ax.set_title(f"{component.upper()} Component of Drifter Velocity")
-    plt.tight_layout()
-    plt.show()
 
 def compare_velocity_components(ds_oscar, ds_drifter):
     """
@@ -590,31 +444,68 @@ def summarize_time_jumps(df, col="time"):
     return summary
         
  
-def plot_velocity_comparison_scatter(df, temporal_range):
+def plot_velocity_comparison_scatter(df, temporal_range, ssh):
+    def compute_metrics(y_true, y_pred):
+        # Flatten and mask NaNs
+        y_true = np.array(y_true).flatten()
+        y_pred = np.array(y_pred).flatten()
+        mask = ~np.isnan(y_true) & ~np.isnan(y_pred)
+        
+        y_true_clean = y_true[mask]
+        y_pred_clean = y_pred[mask]
+
+        # Metrics
+        difference = np.mean(y_pred_clean - y_true_clean)
+        rmsd = np.sqrt(np.mean((y_pred_clean - y_true_clean) ** 2))
+        r2 = 1 - (np.sum((y_true_clean - y_pred_clean) ** 2) / 
+                  np.sum((y_true_clean - np.mean(y_true_clean)) ** 2))
+
+        return r2, rmsd, difference
     
     fig = plt.figure(figsize=(14, 6))
 
     # ---- Zonal (U / ve) ----
     ax1 = plt.subplot(1, 2, 1)
-    ax1.scatter(df['ve'], df['cmems_ve'], label="CMEMS", alpha=0.5, s=5)
-    ax1.scatter(df['ve'], df['neurost_ve'], label="NEUROST", alpha=0.5, s=5)
+    ax1.scatter(df['ve'], df[f'{ssh}_ve'], label= ssh.upper(), alpha=0.5, s=5)
     ax1.plot([-2, 2], [-2, 2], 'k--', linewidth=1)  # 1:1 line
     ax1.set_xlabel("Drifter Zonal Velocity(m/s)")
-    ax1.set_ylabel("OSCAR Zonal Velocity (m/s)")
-    ax1.set_title(f"Zonal Velocity Comparison {temporal_range}")
+    ax1.set_ylabel(f"{ssh.upper()} Zonal Velocity (m/s)")
+    #ax1.set_title(f"Zonal Velocity Comparison {temporal_range}")
     ax1.legend()
     ax1.grid(True)
 
+    r2_u, rmsd_u, diff_u = compute_metrics(df['ve'], df[f'{ssh}_ve'])
+    ax1.text(
+        0.05, 0.95,
+        f"R² = {r2_u:.3f}\nRMSD = {rmsd_u:.3f}\nBias = {diff_u:.3f}",
+        transform=ax1.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7)
+    )
+
     # ---- Meridional (V / vn) ----
     ax2 = plt.subplot(1, 2, 2)
-    ax2.scatter(df['vn'], df['cmems_vn'], label="CMEMS", alpha=0.5, s=5)
-    ax2.scatter(df['vn'], df['neurost_vn'], label="NEUROST", alpha=0.5, s=5)
+    ax2.scatter(df['vn'], df[f'{ssh}_vn'], label=ssh.upper(), alpha=0.5, s=5)
     ax2.plot([-2, 2], [-2, 2], 'k--', linewidth=1)  # 1:1 line
-    ax2.set_xlabel("Drifter Zonal Velocity (m/s)")
-    ax2.set_ylabel("OSCAR Zonal Velocity (m/s)")
-    ax2.set_title(f"Meridional Velocity Comparison {temporal_range}")
+    ax2.set_xlabel("Drifter Meridonal Velocity (m/s)")
+    ax2.set_ylabel(f"{ssh.upper()} Meridonal Velocity (m/s)")
+    #ax2.set_title(f"Meridional Velocity Comparison {temporal_range}")
     ax2.legend()
     ax2.grid(True)
+
+    # Compute stats for meridional
+    r2_v, rmsd_v, diff_v = compute_metrics(df['vn'], df[f'{ssh}_vn'])
+    ax2.text(
+        0.05, 0.95,
+        f"R² = {r2_v:.3f}\nRMSD = {rmsd_v:.3f}\nBias = {diff_v:.3f}",
+        transform=ax2.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7)
+    )
+
+    plt.suptitle(f"{ssh.upper()} vs Drifter Velocity Comparison\n{temporal_range}", fontsize=14, y=1.02)
 
     plt.tight_layout()
     #plt.show()
@@ -684,7 +575,7 @@ def plot_validation_metrics(df, temporal_range, models, components):
 
 def compute_binned_correlations(
     df,
-    models=('cmems', 'neurost'),
+    models=['cmems'],
     components=('ve', 'vn'),
     lat_range=(-60, 60),
     lon_range=(0, 360),
@@ -1032,3 +923,17 @@ def make_residual_corr_map(df, model_prefix, component, title, vmin=-0.2, vmax=0
     plt.tight_layout()
     # no save, no show
     return fig
+
+
+
+def clean_validation_df(ds, ssh_mode):
+    """
+    Convert dataset to dataframe with core vars and filter unrealistic drifter velocities.
+    Keeps rows where -2 <= ve <= 2 and -2 <= vn <= 2.
+    """
+    df = ds[['latitude', 'longitude', 've', 'vn',
+             f'{ssh_mode}_ve', f'{ssh_mode}_vn',
+             'time']].to_dataframe().dropna()
+
+    df = df[(df['ve'].between(-2, 2)) & (df['vn'].between(-2, 2))]
+    return df

@@ -7,14 +7,14 @@ from ..config.setup import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def dedup_full_match(ds):
+def dedup_full_match(ds, ssh_mode):
     if "drifter" not in ds.dims:
         raise ValueError("Expected a 'drifter' dimension.")
 
     cols = [
         "time", "latitude", "longitude",
         "ve", "vn", "ID",
-        "cmems_ve", "cmems_vn", "neurost_ve", "neurost_vn",
+        f"{ssh_mode}_ve", f"{ssh_mode}_vn"
     ]
     missing = [c for c in cols if (c not in ds and c not in ds.coords)]
     if missing:
@@ -33,9 +33,9 @@ def dedup_full_match(ds):
 
     return ds_out
 
-def append_to_master(year, month):
-    master_path = os.path.join(validation_dir, 'validation_master.nc')
-    monthly_path = os.path.join(validation_dir, year,f'validation_{year}_{month}.nc' )
+def append_to_master(year, month, start, end, ssh_type, validation_mode):
+    master_path = os.path.join(VALIDATION_DIR, f'validation_{ssh_type}_{validation_mode}_master_{start}_{end}.nc')
+    monthly_path = os.path.join(VALIDATION_DIR, ssh_type.upper(), validation_mode, year,f'validation_{year}_{month}.nc' )
 
 
 
@@ -48,7 +48,7 @@ def append_to_master(year, month):
         
         ds_updated_master = xr.concat([ds_master, ds_month], dim="drifter").sortby("time")
        
-        ds_updated_master_dedup = dedup_full_match(ds_updated_master)
+        ds_updated_master_dedup = dedup_full_match(ds_updated_master, ssh_type)
 
        
         #REMOVE DUPLICATES HERE 
@@ -85,6 +85,7 @@ def save_plots_to_pdf(
     pad_bottom=0.20,              # extra bottom room for caption
     box=True
 ):
+    print(pdf_path)
    
     if isinstance(explanations, str):
         explanations = [explanations] * len(figs)

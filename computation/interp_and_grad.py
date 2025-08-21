@@ -11,15 +11,16 @@ def interpolate_dataset(ds):
      elif SSH_MODE  == "cmems":
         lon = np.arange(0, 360, 0.25)
         lat = np.arange(-89.75, 90.0, 0.25)
+
+
      else:
-        raise ValueError(f"Unknown SSH source '{SSH_MODE}'. Expected 'neurost' or 'cmems'.")
+        raise ValueError(f"Unknown SSH source '{SSH_MODE}'. Expected 'neurost', 'cmems' or both.")
      
 
 
      ds_interp = ds.interp(longitude=lon, latitude=lat)
 
      return ds_interp
-
 
 
 def calculate_gradient(ds, var):

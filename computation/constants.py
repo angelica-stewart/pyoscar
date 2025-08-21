@@ -70,7 +70,15 @@ powers = np.arange(len(f), 0, -1)
 FACTOR = PHIm**(powers - 2)
 f = f * FACTOR / (2 * OMEGA)
 
-spacing = 0.25 if SSH_MODE == "cmems" else 0.1
+
+if SSH_MODE == "cmems":
+    spacing = 0.25
+elif SSH_MODE == "neurost":
+    spacing = 0.1 
+
+     
+
+
 
 XOSC = np.arange(0, 360, spacing)
 YOSC = np.arange(-89.75, 90.0, spacing)
